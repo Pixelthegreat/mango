@@ -1,33 +1,63 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "object.h"
-#include "error.h"
-#include "names.h"
+#include "mango.h"
 
 int main(int argc, char **argv) {
 
-	object *myStr = objectNewString("hello, world!");
+	/* file name */
+	char *fname = (char*)"test.m";
+
+	file *f = fileNew(fname, FILE_MODE_READ);
+
+	/* read text */
+	char *text = fileReadAll(f);
+
+	lexer *l = lexerNew(text, fname);
+	lexerLex(l);
+
+	if (!errorIsSet()) {
+
+		printf("Lexer Stage\n");
+
+		/* print tokens */
+		for (int i = 0; i < l->n_of_tokens; i++)
+			printf("%d:%s\n", l->tokens[i]->t_type, l->tokens[i]->t_value);
 	
-	objectWrite(FD_CONSOLE, myStr);
-	printf("\n");
+		printf("Parser Stage\n");
 
-	if (errorIsSet()) {
+		/* create parser */
+		parser *p = parserNew(l->tokens, l->n_of_tokens);
 
+		/* parse */
+		parserParse(p);
+
+		/* error */
+		if (errorIsSet()) {
+
+			errorPrint();
+		}
+		else {
+
+			if (p->pn != NULL) nodePrintTree(p->pn);
+		}
+
+		/* free parser and node */
+		parserFree(p);
+		if (p->pn != NULL) nodeFree(p->pn);
+	}
+	else {
 		errorPrint();
-		errorClear();
 	}
 
-	nameTable *nt = namesNew();
+	free(text);
 
-	object *o = namesGetFromString(nt, objectNewString("myStr"));
+	/* close and free all files */
+	fileFreeAll();
 
-	if (errorIsSet()) {
+	/* free lexer */
+	lexerFree(l);
 
-		errorPrint();
-		errorClear();
-	}
-
-	namesFree(nt);
-	objectFreeAll();
+	return 0;
 }

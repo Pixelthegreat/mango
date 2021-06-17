@@ -7,6 +7,11 @@
 #define ERROR_TYPE_RUNTIME 1
 
 /* error codes */
+/* lexer errors start at 100 */
+#define ERROR_CODE_UNKNOWNCHAR 100
+#define ERROR_CODE_EXPECTEDCHAR 101
+/* parser errors start at 250 */
+#define ERROR_CODE_EXPECTEDTOKEN 250
 /* interpreter errors start at 400 */
 #define ERROR_CODE_ILLEGALOP 400 /* illegal operation */
 #define ERROR_CODE_MEMORY 401 /* memory allocation failure */

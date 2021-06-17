@@ -9,5 +9,16 @@ As a disclaimer, I nor anyone I know owns the name "mango" as a copyrighted name
 
 The name has no real meaning, and like adamite, there is no logo or anything to promote the name. Whether it specifically relates to anything that the language has to offer or not, I like the name and I plan to use it so long as it is not copyrighted.
 
+## implementation update 2021-06-17
+I am finished with the start of the parser and I am (pretty much) done with the lexer as well. On top of that, I have a good idea for future syntax. I am working on the standard library, as well as a basic syntax example program. I also have a plan for the bytecode compiler and interpreter.
+
+### bytecode stuff
+
+For bytecode, I will be making my own system to handle it. You should have the ability to run the bytecode generated immediately, or save it to a file in the form of two bytecode file types: MangoBC (Executable form, extension is ".mc"), and MangoLib (Non-executable library form, extension is ".ml"). The only difference between the two is the header information in the beginning of each file.
+
+### standard library
+
+I am planning on including the main code for the standard library in a separate repository. I am also planning on using the previously mentioned MangoLib bytecode format for the standard library.
+
 ## going further
 I am planning on making a new commit every time at least two "sections" are finished. For example, I am working on a brand-new object storage and variable name system as well as an error system, which will probably all come within 3rd commit. I will also make sure to change the README.md file accordingly.

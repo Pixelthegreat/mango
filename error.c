@@ -61,7 +61,7 @@ extern void errorPrint() {
 		fname = (char*)"<stdin>";
 
 	/* print the error */
-	printf("%s (File \'%s\', Line %u):\n  %s\n", error_name, fname, error_lineno, error_message);
+	printf("%s (File \'%s\', Line %u, Column %u):\n  %s\n", error_name, fname, error_lineno, error_colno, error_message);
 }
 
 /* clear the error status */
