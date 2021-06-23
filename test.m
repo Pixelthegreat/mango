@@ -1,1 +1,1 @@
--10 + 10 ;
+write(0, 'hello, world!');

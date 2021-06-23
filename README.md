@@ -9,12 +9,9 @@ As a disclaimer, I nor anyone I know owns the name "mango" as a copyrighted name
 
 The name has no real meaning, and like adamite, there is no logo or anything to promote the name. Whether it specifically relates to anything that the language has to offer or not, I like the name and I plan to use it so long as it is not copyrighted.
 
-## implementation update 2021-06-17
-I am finished with the start of the parser and I am (pretty much) done with the lexer as well. On top of that, I have a good idea for future syntax. I am working on the standard library, as well as a basic syntax example program. I also have a plan for the bytecode compiler and interpreter.
+## implementation update 2021-06-23
 
-### bytecode stuff
-
-For bytecode, I will be making my own system to handle it. You should have the ability to run the bytecode generated immediately, or save it to a file in the form of two bytecode file types: MangoBC (Executable form, extension is ".mc"), and MangoLib (Non-executable library form, extension is ".ml"). The only difference between the two is the header information in the beginning of each file.
+The parser is now finished (for now), and I have started work on the very beginnings of the bytecode system. For reference, I have included "bytecode_structure2.txt" in the project folder, but it doesn't actually have a lot of information so far. Currently, the bytecode system just prints out the binary information created. However, I do plan on adding in more File I/O stuff soon, so that options can be passed to select a specific file, compile to library or bytecode executable, execute an existing bytecode file, or just execute the code generated immediately. The fairly basic argument system will also include the ability to "link" existing bytecode libraries. As I have mentioned below, I plan on compiling the majority of the standard library compiled to a bytecode library. The only code for the standard library that won't be compiled will be the header files (because I am planning on using a system somewhat similar to C that isn't actually required if you so desire). Of course, you can still use "include" with your required source files for your library if you wish to do something more similar to python modules.
 
 ### standard library
 

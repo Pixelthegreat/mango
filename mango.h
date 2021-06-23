@@ -9,7 +9,7 @@
 #define HAS_FILE				1 /* file system */
 #define HAS_OBJECT				1 /* object system */
 #define HAS_VM					0 /* bytecode interpreter */
-#define HAS_BYTECODE			0 /* bytecode compiler */
+#define HAS_BYTECODE			1 /* bytecode compiler */
 #define HAS_NAMES				1 /* name system */
 #define HAS_ERROR				1 /* error handling */
 

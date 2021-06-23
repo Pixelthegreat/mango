@@ -24,9 +24,10 @@ extern node *parserCompExpr(parser *p); /* comparison expression */
 extern node *parserArithExpr(parser *p); /* arithmatic expression */
 extern node *parserTerm(parser *p); /* parse a term */
 extern node *parserFactor(parser *p); /* parse a factor */
+extern node *parserCall(parser *p); /* parse a function call which goes straight to factor otherwise */
 extern node *parserVarDec(parser *p); /* parse a variable declaration */
 extern node *parserVarAsn(parser *p); /* parse a variable assignment */
-extern node *parserFuncDef(parser *p); /* parse a function declaration/definition (depends on how user put it) */
+extern node *parserFuncDef(parser *p); /* parse a function definition (depends on how user put it) */
 extern node *parserCall(parser *p); /* parse a function call */
 extern node *parserString(parser *p); /* parse a string */
 extern node *parserInt(parser *p); /* parse an int */

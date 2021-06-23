@@ -91,37 +91,152 @@ extern void nodePrintTree(node *n) {
 
 		printf("\'%s\'", n->tokens[0]->t_value);
 	}
+	/* include */
+	else if (n->type == NODE_INCLUDE) {
+
+		printf("include \'%s\'", n->tokens[0]->t_value);
+	}
+	/* for node */
+	else if (n->type == NODE_FORNODE) {
+
+		printf("for (");
+		nodePrintTree(n->children[0]);
+		printf("; ");
+		nodePrintTree(n->children[1]);
+		printf("; ");
+		nodePrintTree(n->children[2]);
+		printf(") -> [\n");
+
+		for (unsigned int i = 3; i < n->n_of_children; i++) {
+
+			nodePrintTree(n->children[i]);
+			printf(";\n");
+		}
+		printf("]");
+	}
 	/* variable access */
 	else if (n->type == NODE_VARACCESS) {
 
-		printf("%s", n->tokens[0]->t_value);
+		/* ( */
+		printf("(");
+
+		/* loop through tokens */
+		for (unsigned int i = 0; i < n->n_of_tokens; i++) {
+
+			/* token */
+			printf("%s", n->tokens[i]->t_value);
+
+			/* print '->' */
+			if (i < n->n_of_tokens - 1)
+				printf("->");
+		}
+
+		/* ) */
+		printf(")");
 	}
 	/* variable assignment */
-	else if (n->type == NODE_VARASSIGN) {
+	else if (n->type == NODE_VARNEW) {
 
-		printf("%s %s = ", n->tokens[0]->t_value,
-						   n->tokens[1]->t_value);
-		nodePrintTree(n->children[0]);
+		/* pointer */
+		int is_p = n->values[1];
+
+		/* not array */
+		if (n->values[0] == 0) {
+
+			if (!is_p) printf("%s %s = ", n->tokens[0]->t_value, n->tokens[1]->t_value);
+			else printf("%s *%s = ", n->tokens[0]->t_value, n->tokens[1]->t_value);
+			nodePrintTree(n->children[0]);
+		}
+		/* array */
+		else {
+
+			if (!is_p) printf("%s %s[", n->tokens[0]->t_value, n->tokens[1]->t_value);
+			else printf("%s *%s[", n->tokens[0]->t_value, n->tokens[1]->t_value);
+			nodePrintTree(n->children[0]);
+			printf("] = ");
+			nodePrintTree(n->children[1]);
+		}
+	}
+	/* also */
+	else if (n->type == NODE_VARUN) {
+
+		/* is pointer */
+		int is_p = n->values[1];
+
+		/* not array */
+		if (n->values[0] == 0) {
+
+			if (!is_p) printf("%s %s", n->tokens[0]->t_value, n->tokens[1]->t_value);
+			else printf("%s *%s", n->tokens[0]->t_value, n->tokens[1]->t_value);
+		}
+		/* array */
+		else {
+
+			if (!is_p) printf("%s %s[", n->tokens[0]->t_value, n->tokens[1]->t_value);
+			else printf("%s *%s[", n->tokens[0]->t_value, n->tokens[1]->t_value);
+			nodePrintTree(n->children[0]);
+			printf("]");
+		}
 	}
 	/* function definition */
 	else if (n->type == NODE_FUNCDEF) {
 
-		//
+		/* print original */
+		printf("(");
+		nodePrintTree(n->children[0]);
+		printf(" -> [\n");
+
+		for (unsigned int i = 1; i < n->n_of_children; i++) {
+
+			/* print node */
+			nodePrintTree(n->children[i]);
+			printf(";\n");
+		}
+
+		/* print end */
+		printf("])");
 	}
 	/* function declaration */
 	else if (n->type == NODE_FUNCDEC) {
 
-		//
+		/* is pointer */
+		int is_p = n->values[0];
+		unsigned int idx = 1;
+
+		/* print stuff */
+		if (!is_p) printf("fun %s %s(", n->tokens[0]->t_value, n->tokens[1]->t_value);
+		else printf("fun %s *%s(", n->tokens[0]->t_value, n->tokens[1]->t_value);
+
+		for (unsigned int i = 2; i < n->n_of_tokens; i++) {
+
+			/* is pointer */
+			is_p = n->values[idx++];
+
+			/* print token */
+			if (!is_p) printf("%s %s", n->tokens[i]->t_value, n->tokens[i+1]->t_value);
+			else printf("%s *%s", n->tokens[i]->t_value, n->tokens[i+1]->t_value);
+
+			/* print ', ' if not at end of list */
+			if (i < n->n_of_tokens-2)
+				printf(", ");
+
+			i++;
+		}
+
+		/* ) */
+		printf(")");
 	}
 	/* function call */
 	else if (n->type == NODE_CALL) {
 
-		printf("%s(");
+		nodePrintTree(n->children[0]);
 
-		for (int i = 0; i < n->n_of_children; i++) {
+		printf("(");
+
+		for (int i = 1; i < n->n_of_children; i++) {
 
 			nodePrintTree(n->children[i]);
-			printf(", ");
+			if (i < n->n_of_children-1) printf(", ");
 		}
 
 		printf(")");
@@ -132,7 +247,7 @@ extern void nodePrintTree(node *n) {
 		printf("(");
 
 		nodePrintTree(n->children[0]);
-		printf(" %d ", n->tokens[0]->t_type);
+		printf(" %s ", n->tokens[0]->t_value);
 		nodePrintTree(n->children[1]);
 
 		printf(")");
@@ -140,17 +255,35 @@ extern void nodePrintTree(node *n) {
 	/* unary operation */
 	else if (n->type == NODE_UNOP) {
 
-		printf("(%d ", n->tokens[0]->t_type);
+		printf("(%s", n->tokens[0]->t_value);
 		nodePrintTree(n->children[0]);
 		printf(")");
 	}
-	/* if statement */
+	/* if statment */
 	else if (n->type == NODE_IFNODE) {
 
 		printf("if (");
 		nodePrintTree(n->children[0]);
-		printf(") ");
-		nodePrintTree(n->children[1]);
+		printf(") -> [\n");
+
+		for (unsigned int i = 1; i < n->n_of_children; i++) {
+
+			nodePrintTree(n->children[i]);
+			printf(";\n");
+		}
+		printf("]");
+	}
+	/* struct */
+	else if (n->type == NODE_STRUCT) {
+
+		printf("struct %s -> [\n", n->tokens[0]->t_value);
+
+		for (unsigned int i = 1; i < n->n_of_children; i++) {
+
+			nodePrintTree(n->children[i]);
+			printf(";\n");
+		}
+		printf("]");
 	}
 	/* for loop */
 	/* while loop */
@@ -158,8 +291,14 @@ extern void nodePrintTree(node *n) {
 
 		printf("while (");
 		nodePrintTree(n->children[0]);
-		printf(") ");
-		nodePrintTree(n->children[1]);
+		printf(") -> [\n");
+
+		for (unsigned int i = 1; i < n->n_of_children; i++) {
+
+			nodePrintTree(n->children[i]);
+			printf(";\n");
+		}
+		printf("]");
 	}
 	/* else node */
 	else if (n->type == NODE_ELSENODE) {
@@ -176,7 +315,7 @@ extern void nodePrintTree(node *n) {
 
 			nodePrintTree(n->children[i]);
 			/* newline */
-			printf("\n");
+			printf(";\n");
 		}
 
 		printf("}\n");
@@ -186,7 +325,135 @@ extern void nodePrintTree(node *n) {
 
 		printf("extern ");
 		nodePrintTree(n->children[0]);
-		printf("\n");
+	}
+	/* return */
+	else if (n->type == NODE_RETURN) {
+
+		printf("return ");
+		nodePrintTree(n->children[0]);
+	}
+	/* unsigned */
+	else if (n->type == NODE_UNSIGNED) {
+		
+		printf("unsigned ");
+		nodePrintTree(n->children[0]);
+	}
+	/* const */
+	else if (n->type == NODE_CONST) {
+		
+		printf("const ");
+		nodePrintTree(n->children[0]);
+	}
+	/* variable assigment */
+	else if (n->type == NODE_VARASSIGN) {
+
+		/* ( */
+		printf("(");
+
+		/* loop through tokens */
+		for (unsigned int i = 0; i < n->n_of_tokens; i++) {
+
+			/* token */
+			printf("%s", n->tokens[i]->t_value);
+
+			/* print '->' */
+			if (i < n->n_of_tokens - 1)
+				printf("->");
+		}
+
+		/* value */
+		printf(" = ");
+
+		nodePrintTree(n->children[0]);
+
+		/* ) */
+		printf(")");
+	}
+	/* getitem */
+	else if (n->type == NODE_GETITEM) {
+
+		/* nodes */
+		printf("(");
+
+		for (unsigned int i = 0; i < n->n_of_tokens; i++) {
+
+			/* token */
+			printf("%s", n->tokens[i]->t_value);
+
+			/* print '->' */
+			if (i < n->n_of_tokens - 1)
+				printf("->");
+		}
+
+		printf("[");
+		nodePrintTree(n->children[0]);
+		printf("])");
+	}
+	/* setitem */
+	else if (n->type == NODE_SETITEM) {
+
+		/* nodes */
+		printf("(");
+
+		for (unsigned int i = 0; i < n->n_of_tokens; i++) {
+
+			/* token */
+			printf("%s", n->tokens[i]->t_value);
+
+			/* print '->' */
+			if (i < n->n_of_tokens - 1)
+				printf("->");
+		}
+
+		printf("[");
+		nodePrintTree(n->children[0]);
+		printf("] = ");
+
+		/* value */
+		nodePrintTree(n->children[1]);
+		printf(")");
+	}
+	else if (n->type == NODE_INC) {
+
+		/* nodes */
+		printf("(");
+
+		for (unsigned int i = 0; i < n->n_of_tokens; i++) {
+
+			/* token */
+			printf("%s", n->tokens[i]->t_value);
+
+			/* print '->' */
+			if (i < n->n_of_tokens - 1)
+				printf("->");
+		}
+
+		printf("++)");
+	}
+	else if (n->type == NODE_DEC) {
+
+		/* nodes */
+		printf("(");
+
+		for (unsigned int i = 0; i < n->n_of_tokens; i++) {
+
+			/* token */
+			printf("%s", n->tokens[i]->t_value);
+
+			/* print '->' */
+			if (i < n->n_of_tokens - 1)
+				printf("->");
+		}
+
+		printf("--)");
+	}
+	/* typedef */
+	else if (n->type == NODE_TYPEDEF) {
+
+		int is_p = n->values[0]; /* is a pointer */
+
+		if (!is_p) printf("typedef %s %s", n->tokens[0]->t_value, n->tokens[1]->t_value);
+		else printf("typedef %s *%s", n->tokens[0]->t_value, n->tokens[1]->t_value);
 	}
 }
 
@@ -195,7 +462,7 @@ extern void nodeFree(node *n) {
 
 	/* free children */
 	for (int i = 0; i < n->n_of_children; i++)
-		nodeFree(n->children[i]);
+		if (n->children[i] != NULL) nodeFree(n->children[i]);
 
 	/* free lists */
 	free(n->children);

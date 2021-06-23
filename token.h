@@ -30,6 +30,9 @@
 #define TOKEN_GT			24
 #define TOKEN_LTE			25
 #define TOKEN_GTE			26
+#define TOKEN_INC			27
+#define TOKEN_AMP			28
+#define TOKEN_DEC			29
 
 /* token struct */
 typedef struct {
@@ -43,5 +46,8 @@ typedef struct {
 /* functions */
 extern token *tokenNew(unsigned int t_type, char *t_value, unsigned int lineno, unsigned int colno, char *fname); /* create a new token */
 extern void tokenFree(token *t); /* free a token */
+
+/* macros */
+#define tokenMatches(tok, type, val) ((tok->t_type == type) && (!strcmp(tok->t_value, val)))
 
 #endif /* _TOKEN_H */

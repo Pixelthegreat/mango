@@ -5,21 +5,33 @@
 #include "token.h"
 
 /* node types */
-#define NODE_INT			0
-#define NODE_STRING			1
-#define NODE_VARACCESS		2
-#define NODE_VARASSIGN		3
-#define NODE_FUNCDEF		4
-#define NODE_FUNCDEC		5
-#define NODE_CALL			6
-#define NODE_BINOP			7
-#define NODE_UNOP			8
-#define NODE_IFNODE			9
-#define NODE_FORNODE		10
-#define NODE_WHILENODE		11
-#define NODE_ELSENODE		12
-#define NODE_STATEMENTS		13
-#define NODE_EXTERN			14
+#define NODE_INT			0 /* integer value */
+#define NODE_STRING			1 /* string value */
+#define NODE_VARACCESS		2 /* variable access */
+#define NODE_VARASSIGN		3 /* variable assignment */
+#define NODE_FUNCDEF		4 /* function definition */
+#define NODE_FUNCDEC		5 /* function declaration */
+#define NODE_CALL			6 /* function call */
+#define NODE_BINOP			7 /* binary operation */
+#define NODE_UNOP			8 /* unary operation */
+#define NODE_IFNODE			9 /* if statement */
+#define NODE_FORNODE		10 /* for loop */
+#define NODE_WHILENODE		11 /* while loop */
+#define NODE_ELSENODE		12 /* else block */
+#define NODE_STATEMENTS		13 /* block of statements */
+#define NODE_EXTERN			14 /* extern */
+#define NODE_GETITEM		16 /* get an item in array */
+#define NODE_SETITEM		17 /* set an item in array */
+#define NODE_VARNEW			18 /* new variable with value specified */
+#define NODE_VARUN			19 /* variable with no value specified */
+#define NODE_INC			20 /* increment operator (++) */
+#define NODE_DEC			21 /* decrement operator (--) */
+#define NODE_RETURN			22 /* return a value from function */
+#define NODE_INCLUDE		23 /* include a file into program */
+#define NODE_TYPEDEF		24 /* typedef a type based on another type */
+#define NODE_CONST			25 /* constant */
+#define NODE_UNSIGNED		26 /* unsigned */
+#define NODE_STRUCT			27 /* struct */
 
 /* node struct */
 typedef struct _node {

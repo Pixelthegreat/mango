@@ -51,8 +51,12 @@ extern void errorPrint() {
 
 	if (error_type == ERROR_TYPE_SYNTAX)
 		error_name = "Syntax Error";
-	else if (error_type = ERROR_TYPE_RUNTIME)
+	else if (error_type == ERROR_TYPE_RUNTIME)
 		error_name = "Runtime Error";
+	else if (error_type == ERROR_TYPE_BYTECODE)
+		error_name = "Bytecode Error";
+	else if (error_type == ERROR_TYPE_INTERNAL)
+		error_name = "Interal Error";
 
 	/* get file name */
 	char *fname = error_fname;

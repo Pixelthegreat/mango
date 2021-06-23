@@ -1,6 +1,6 @@
 
-output: main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o
-	gcc -m32 main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o -o main
+output: main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o bytecode.o
+	gcc -m32 main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o bytecode.o -o main
 
 main.o: main.c mango.h
 	gcc -c main.c -m32
@@ -28,6 +28,9 @@ lexer.o: lexer.c lexer.h
 
 parser.o: parser.c parser.h
 	gcc -c parser.c -m32
+
+bytecode.o: bytecode.c bytecode.h
+	gcc -c bytecode.c -m32
 
 clean:
 	rm *.o main

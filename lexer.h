@@ -47,8 +47,11 @@ extern void lexerAddToken(lexer *l, token *t); /* add a token */
 						 !strcmp(s, "for") ||\
 						 !strcmp(s, "if") ||\
 						 !strcmp(s, "return") ||\
-						 !strcmp(s, "define") ||\
+						 !strcmp(s, "typedef") ||\
 						 !strcmp(s, "as") ||\
-						 !strcmp(s, "struct"))
+						 !strcmp(s, "struct") ||\
+						 !strcmp(s, "while") ||\
+						 !strcmp(s, "unsigned") ||\
+						 !strcmp(s, "const"))
 
 #endif /* _LEXER_H */

@@ -161,6 +161,14 @@ extern void lexerArrow(lexer *l) {
 		lexerAddToken(l, t);
 	}
 
+	/* decrement (--) */
+	else if (l->c_char == '-') {
+
+		lexerAdvance(l);
+		token *t = tokenNew(TOKEN_DEC, "--", lineno, colno, l->fname);
+		lexerAddToken(l, t);
+	}
+
 	/* minus */
 	else {
 
@@ -249,9 +257,30 @@ extern void lexerLex(lexer *l) {
 		/* '+' */
 		else if (l->c_char == '+') {
 
-			token *t = tokenNew(TOKEN_PLUS, "+", l->lineno, l->colno, l->fname);
-			lexerAddToken(l, t);
+			/* error info */
+			unsigned int lineno = l->lineno;
+			unsigned int colno = l->colno;
+
+			/* advance */
 			lexerAdvance(l);
+
+			/* type */
+			unsigned int type = TOKEN_PLUS;
+			const char *value = "+";
+
+			/* '++' */
+			if (l->c_char == '+') {
+
+				type = TOKEN_INC;
+				value = "++";
+			
+				/* advance */
+				lexerAdvance(l);
+			}
+
+			/* add token */
+			token *t = tokenNew(type, (char *)value, lineno, colno, l->fname);
+			lexerAddToken(l, t);
 		}
 
 		/* '*' */
@@ -380,6 +409,14 @@ extern void lexerLex(lexer *l) {
 			lexerAdvance(l);
 		}
 
+		/* '&' */
+		else if (l->c_char == '&')  {
+
+			token *t = tokenNew(TOKEN_AMP, "&", l->lineno, l->colno, l->fname);
+			lexerAddToken(l, t);
+			lexerAdvance(l);
+		}
+
 		/* '=', '==' */
 		else if (l->c_char == '=') {
 
@@ -394,6 +431,7 @@ extern void lexerLex(lexer *l) {
 
 				t_type = TOKEN_EE;
 				t_val = "==";
+				lexerAdvance(l);
 			}
 
 			/* add token */
@@ -411,10 +449,11 @@ extern void lexerLex(lexer *l) {
 			char *t_val = "<"; /* token value */
 
 			/* '=='? */
-			if (l->c_char == '<') {
+			if (l->c_char == '=') {
 
 				t_type = TOKEN_LTE;
 				t_val = "<=";
+				lexerAdvance(l);
 			}
 
 			/* add token */
@@ -432,10 +471,11 @@ extern void lexerLex(lexer *l) {
 			char *t_val = ">"; /* token value */
 
 			/* '=='? */
-			if (l->c_char == '>') {
+			if (l->c_char == '=') {
 
 				t_type = TOKEN_GTE;
 				t_val = ">=";
+				lexerAdvance(l);
 			}
 
 			/* add token */
@@ -465,6 +505,7 @@ extern void lexerLex(lexer *l) {
 
 			/* add token */
 			token *t = tokenNew(TOKEN_NE, "!=", l->lineno, l->colno, l->fname);
+			lexerAddToken(l, t);
 		}
 
 		/* whitespace */
