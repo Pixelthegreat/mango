@@ -278,7 +278,7 @@ extern void nodePrintTree(node *n) {
 
 		printf("struct %s -> [\n", n->tokens[0]->t_value);
 
-		for (unsigned int i = 1; i < n->n_of_children; i++) {
+		for (unsigned int i = 0; i < n->n_of_children; i++) {
 
 			nodePrintTree(n->children[i]);
 			printf(";\n");

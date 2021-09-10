@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <stdio.h> /* FILE */
 #include <string.h> /* strcat, strlen */
+#include <unistd.h> /* write, read */
 
 /* variables */
-unsigned int current_fd = 2;
 file **files = NULL; /* file list */
 unsigned int n_of_files = 0; /* number of files in list */
 unsigned int file_cap = 0; /* capacity of file list */
@@ -17,13 +17,13 @@ extern file *fileNew(char *fname, unsigned int mode) {
 
 	/* values */
 	f->fname = fname;
-	f->fd = current_fd++;
 	f->mode = mode;
 	f->is_open = 1;
 	f->f_pos = 0;
 	f->buffer_cap = 256;
 	f->at_eof = 0;
 	f->first_char = '\0';
+	f->is_extern = 0;
 
 	/* malloc list */
 	f->buffer = (char *)malloc(f->buffer_cap);
@@ -47,6 +47,57 @@ extern file *fileNew(char *fname, unsigned int mode) {
 	/* if file is not open */
 	if (f->f == NULL)
 		f->is_open = 0;
+
+	/* set file descriptor */
+	else f->fd = fileno(f->f);
+
+	/* put file in list */
+	if (files == NULL) {
+
+		files = (file **)malloc(sizeof(file *) * 8);
+		file_cap = 8;
+		n_of_files = 0;
+	}
+
+	if (n_of_files >= file_cap) {
+
+		file_cap *= 2;
+		files = (file **)realloc(files, sizeof(file *) * file_cap);
+	}
+
+	files[n_of_files++] = f;
+
+	/* return file */
+	return f;
+}
+
+/* get a file from fd */
+extern file *fileFromFD(int fd) {
+
+	/* malloc new file */
+	file *f = (file *)malloc(sizeof(file));
+
+	/* values */
+	f->fname = "";
+	f->fd = fd;
+	f->is_open = 1;
+	f->f_pos = 0;
+	f->buffer_cap = 256;
+	f->at_eof = 0;
+	f->first_char = '\0';
+	f->is_extern = 1;
+
+	/* malloc list */
+	f->buffer = (char *)malloc(f->buffer_cap);
+
+	for (int i = 0; i < f->buffer_cap; i++)
+		f->buffer[i] = '\0';
+
+	/* get file */
+	f->f = FILEGET(fd);
+
+	/* get mode */
+	f->mode = FILE_MODE_READWRITE;
 
 	/* put file in list */
 	if (files == NULL) {
@@ -83,6 +134,44 @@ extern void fileRead(file *f) {
 		fileReadChar(f, idx);
 		idx++;
 	}
+}
+
+/* read from a descriptor */
+extern char *fileReadLine(int fd) {
+
+	/* buffer */
+	int buf_sz = 1024;
+	char *buf = (char *)malloc(buf_sz);
+
+	int c; /* current character */
+
+	/* get file */
+	FILE *f = FILEGET(fd);
+
+	/* add text */
+	unsigned int idx = 0;
+	while ((!feof(f)) && c != '\n') {
+
+		/* get char */
+		c = getc(f);
+
+		/* resize buffer */
+		if (idx >= buf_sz) {
+
+			/* resize */
+			buf_sz *= 2;
+			buf = (char *)realloc(buf, buf_sz);
+		}
+
+		/* add char */
+		buf[idx++] = (char)c;
+	}
+
+	/* add null termination character */
+	buf[idx] = '\0';
+
+	/* return buffer */
+	return buf;
 }
 
 /* read all the contents of a file */
@@ -159,7 +248,7 @@ extern file *fileGet(unsigned int fd) {
 /* close a file */
 extern void fileClose(file *f) {
 
-	if (f->f != NULL) {
+	if (f->f != NULL && !(f->is_extern)) {
 	
 		fclose(f->f); /* close file if needed */
 		f->f = NULL; /* remove file pointer */

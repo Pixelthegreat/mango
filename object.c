@@ -1,5 +1,6 @@
 #include "object.h"
 #include "error.h" /* error handling */
+#include "file.h" /* basic file handling system */
 
 #include <stdlib.h> /* malloc/realloc/free, etc */
 #include <string.h> /* strcpy, strlen, etc */
@@ -29,7 +30,7 @@ extern object *objectNew(unsigned char type) {
 	/* set our values */
 	o->type = type;
 	o->refcnt = 0; /* can be freed if it needs to */
-	o->value = NULL; /* no value YET */
+	o->value = (unsigned long)0; /* no value YET */
 	
 	o->lineno = 0;
 	o->colno = 0;
@@ -77,15 +78,8 @@ extern object *objectNewInt(int value) {
 	if (o == NULL)
 		return NULL;
 
-	/* malloc new value */
-	int *i = (int *)malloc(sizeof(int));
-	*i = value; /* FOR FUTURE READERS:
-	the purpose to store a malloc'd value is for
-	the reason that the value is stored as a
-	void pointer, and all the values passed in
-	to the new object functions are stored locally. */
-
-	o->value = (void*)i;
+	/* pun the value */
+	o->value = (unsigned long)*(unsigned int *)&value;
 	return o;
 }
 
@@ -93,7 +87,7 @@ extern object *objectNewInt(int value) {
 extern object *objectNewString(char *value) {
 
 	/* get object */
-	object *o = objectNew(OBJECT_STR);
+	object *o = objectNew((OBJECT_CHR | OBJECT_ARRAY));
 
 	/* failed :( */
 	if (o == NULL)
@@ -105,8 +99,8 @@ extern object *objectNewString(char *value) {
 	strcpy(dyn, value);
 
 	/* store value and return */
-	o->value = (void*)dyn;
-	return o;
+	o->value = (unsigned long)dyn;
+	return objectNewPointer(o);
 }
 
 /* create a char */
@@ -119,19 +113,34 @@ extern object *objectNewChar(char value) {
 	if (o == NULL)
 		return NULL;
 
-	/* malloc new value */
-	char *i = (char *)malloc(sizeof(char));
-	*i = value;
+	/* pun the value */
+	o->value = (unsigned long)*(unsigned char *)&value;
+	return o;
+}
 
-	o->value = (void*)i;
+/* create a pointer object */
+extern object *objectNewPointer(object *vo) {
+
+	/* get object */
+	object *o = objectNew(POINTER(vo->type));
+
+	/* failed :( */
+	if (o == NULL)
+		return NULL;
+
+	/* pun the value */
+	o->value = (unsigned long)vo;
 	return o;
 }
 
 /* free an object */
 extern void objectFree(object *obj) {
 
-	/* free value and object */
-	free(obj->value); /* string, char, int, ... */
+	/* free string if necessary */
+	if (obj->type == OBJECT_STR)
+		free((char *)(((object *)obj->value)->value));
+
+	/* free the object */
 	free(obj);
 }
 
@@ -237,20 +246,8 @@ extern void objectWrite(int fd, object *value) {
 		return;
 	}
 
-	/* console print */
-	if (fd == FD_CONSOLE)
-		printf("%s", (char*)value->value);
-
-	else /* unknown file descriptor */ {
-		
-		/* set error */
-		errorSet(ERROR_TYPE_RUNTIME,
-				 ERROR_CODE_UNKNOWNFD,
-				 "Invalid/Unknown file descriptor");
-		errorSetPos(value->lineno, value->colno, value->fname);
-
-		return;
-	}
+	/* write to descriptor */
+	fputs((char *)(((object *)value->value)->value), FILEGET(fd));
 
 	/* debug */
 	#if defined(DEBUG) && DEBUG == 1
@@ -260,4 +257,16 @@ extern void objectWrite(int fd, object *value) {
 
 extern void objectPrint(object *obj) {
 	objectWrite(FD_CONSOLE, objectRepresent(obj));
+}
+
+/* for future: remove this warning after it is no longer needed */
+#warning the function 'objectRead' is currently being rewritten and as such shall not be used in any code.
+
+/* read text from file */
+extern object *objectRead(int fd) {
+
+	/* return fileReadFD */
+	//return objectNewString(fileReadLine(fd));
+
+	return NULL;
 }

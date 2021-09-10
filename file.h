@@ -1,8 +1,3 @@
-/* file.h -- * ellaborate * file management system
-it should be noted that in no way am I trying to
-make something like how actual files work in code,
-just my own somewhat similar system.
-*/
 #ifndef _FILE_H
 #define _FILE_H
 
@@ -13,6 +8,9 @@ just my own somewhat similar system.
 #define FILE_MODE_READ			0
 #define FILE_MODE_WRITE			1
 #define FILE_MODE_READWRITE		2
+/* modifiers */
+#define FILE_BINARY				(1 << 2)
+#define FILE_TEXT				(0)
 
 /* file struct */
 typedef struct {
@@ -25,12 +23,15 @@ typedef struct {
 	unsigned int buffer_cap; /* capacity of buffer */
 	unsigned int at_eof; /* determine if we are at the end of the file */
 	char first_char; /* first character in file */
+	unsigned int is_extern; /* determine if the file was from an external source (i.e., stdin, stdout, ...) */
 	FILE *f; /* file i guess */
 } file;
 
 /* functions */
 extern file *fileNew(char *fname, unsigned int mode); /* open a new file */
+extern file *fileFromFD(int fd); /* get a file from a descriptor */
 extern void fileRead(file *f); /* read the file contents (enough to fit in buffer) */
+extern char *fileReadLine(int fd); /* read from a descriptor */
 extern char *fileReadAll(file *f); /* read all the contents of a file */
 extern void fileReadChar(file *f, unsigned int idx); /* read a character */
 extern void fileWrite(file *f, char *text); /* write to a file */
@@ -41,5 +42,14 @@ extern file *fileGet(unsigned int fd); /* get a file from a file descriptor */
 extern void fileClose(file *f); /* close a file */
 extern void fileFree(file *f); /* free a file from memory */
 extern void fileFreeAll(); /* free all files and file list */
+
+extern char *fileGetMode(file *f); /* get mode string for file */
+
+/* get a file from a descriptor */
+#ifdef __MINGW32__ /* mingw defines an IO buffer */
+#define FILEGET(n) (&_iob[n])
+#else
+#define FILEGET(n) (fdopen(n, "r+"))
+#endif
 
 #endif /* _FILE_H */

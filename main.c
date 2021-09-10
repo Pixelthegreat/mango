@@ -2,25 +2,56 @@
 #include <stdlib.h>
 #include <string.h>
 
-//#define TEST_MODE
+//#define TEST_MODE /* for API testing purposes */
 
 #include "mango.h"
 
 int main(int argc, char **argv) {
 
-	#ifdef TEST_MODE
+	#ifndef TEST_MODE
 
-	bytecode *bc = bytecodeNew(NULL, BYTECODE_EX);
+	/* parse args */
+	if (argparse(argc, argv) <= -1) {
 
-	bytecodeWriteStr(bc, "This is the IRS. You have been arrested for violating many money stuffs and whatever. STUPID");
+		/* free list */
+		argparse_free();
+		return -1; /* error code */
+	}
 
-	bytecodePrintf(bc);
+	/* grab filename data from argparse */
+	char **argpfv = argparse_filenames();
+	int argpfc = argparse_fileslen();
 
-	bytecodeFree(bc);
+	/* grab bytecode mode */
+	int bc_mode = argparse_flag2bcm();
+
+	/* error */
+	if (bc_mode <= -1) {
+
+		/* free lists */
+		argparse_free();
+		return -1; /* error code */
+	}
+
+	/* no files */
+	if (argpfc < 1) {
+
+		/* free and return */
+		argparse_free();
+		return 0; /* default code */
+	}
+
+	/* run files */
+	run_all(argpfv, argpfc, bc_mode);
+
+	argparse_free(); /* free argument parser */
+
+	/* free objects */
+	objectFreeAll();
 
 	#else
 	/* file name */
-	char *fname = (char*)"test.m";
+	char *fname = (char *)"test.m";
 
 	file *f = fileNew(fname, FILE_MODE_READ);
 
@@ -59,6 +90,7 @@ int main(int argc, char **argv) {
 
 			/* bytecode */
 			bytecode *bc = bytecodeNew(p->pn, BYTECODE_EX);
+			bc->is_idat = 1;
 			bytecodeComp(bc);
 
 			/* error */
@@ -68,6 +100,12 @@ int main(int argc, char **argv) {
 			else {
 
 				bytecodePrintf(bc);
+
+				FILE *fp = fopen("test.mc", "wb");
+
+				fwrite((char*)bc->bytes, bc->len, 1, fp);
+			
+				fclose(fp);
 			}
 
 			/* free bytecode */
@@ -88,6 +126,7 @@ int main(int argc, char **argv) {
 
 	/* close and free all files */
 	fileFreeAll();
+	objectFreeAll();
 
 	/* free lexer */
 	lexerFree(l);
