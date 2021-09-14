@@ -209,6 +209,22 @@ extern void bytecodeWrite(bytecode *bc, node *n) {
 		bytecodeWriteErrInf(bc, n->lineno, n->colno);
 	}
 
+	/* undefined variable */
+	else if (n->type == NODE_VARUN) {
+
+		/* write node */
+		bytecodeWriteVarUndefined(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* new variable */
+	else if (n->type == NODE_VARNEW) {
+
+		/* write node */
+		bytecodeWriteVarNew(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
 	else {
 		/* unimplemented */
 		errorSet(ERROR_TYPE_BYTECODE,
@@ -490,6 +506,53 @@ extern void bytecodeWriteGetItem(bytecode *bc, node *n) {
 
 	/* write node */
 	bytecodeWrite(bc, n->children[0]);
+}
+
+/* write a new variable */
+extern void bytecodeWriteVarUndefined(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xD7);
+
+	/* has no value */
+	bytecodeAdd(bc, 0x00);
+
+	/* write type and name */
+	bytecodeWriteIdt(bc, n->tokens[0]->t_value);
+	bytecodeWriteIdt(bc, n->tokens[1]->t_value);
+	
+	/* values */
+	bytecodeAdd(bc, (unsigned char)n->values[0]);
+	bytecodeAdd(bc, (unsigned char)n->values[1]);
+
+	/* array */
+	if (n->values[0])
+		bytecodeWrite(bc, n->children[0]);
+}
+
+/* write an undefined variable */
+extern void bytecodeWriteVarNew(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xD7);
+
+	/* has value */
+	bytecodeAdd(bc, 0x01);
+
+	/* write type and name */
+	bytecodeWriteIdt(bc, n->tokens[0]->t_value);
+	bytecodeWriteIdt(bc, n->tokens[1]->t_value);
+	
+	/* values */
+	bytecodeAdd(bc, (unsigned char)n->values[0]);
+	bytecodeAdd(bc, (unsigned char)n->values[1]);
+
+	/* array */
+	if (n->values[0])
+		bytecodeWrite(bc, n->children[0]);
+
+	/* value */
+	bytecodeWrite(bc, n->children[n->values[0]]);
 }
 
 /* print bytecode data hexdump style */

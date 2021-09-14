@@ -10,12 +10,22 @@ int main(int argc, char **argv) {
 
 	#ifndef TEST_MODE
 
+	int agp_res; /* arg parse result */
+
 	/* parse args */
-	if (argparse(argc, argv) <= -1) {
+	if ((agp_res = argparse(argc, argv)) <= -1) {
 
 		/* free list */
 		argparse_free();
 		return -1; /* error code */
+	}
+
+	/* leave immediately with no error */
+	else if (agp_res == 1) {
+
+		/* free list */
+		argparse_free();
+		return 0; /* no error */
 	}
 
 	/* grab filename data from argparse */

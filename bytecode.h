@@ -33,33 +33,35 @@ typedef struct {
 } bytecode;
 
 /* bytecode functions */
-extern unsigned int bytecodeGetc(unsigned char c);
+extern unsigned int bytecodeGetc(unsigned char);
 
-extern bytecode *bytecodeNew(node *n, unsigned int mode); /* create new bytecode object */
+extern bytecode *bytecodeNew(node *, unsigned int); /* create new bytecode object */
 
-extern void bytecodeAdd(bytecode *bc, unsigned char b); /* add byte to byte array */
-extern void bytecodeAddIdat(bytecode *bc, char *s); /* idata (independant data) mode only */
-extern void bytecodeComp(bytecode *bc); /* compile node */
-extern void bytecodeWrite(bytecode *bc, node *n); /* write node */
-extern void bytecodeWriteHeader(bytecode *bc); /* write bytecode file header */
-extern void bytecodeWriteErrInf(bytecode *bc, unsigned int lineno, unsigned int colno); /* write error info */
-extern void bytecodeWriteFileInf(bytecode *bc, char *fname); /* write a file name to change current file attribute */
-extern void bytecodeWriteInt(bytecode *bc, int i); /* write integer */
-extern void bytecodeWriteIntNS(bytecode *bc, int i); /* write integer without signature byte in beginning */
-extern void bytecodeWriteStr(bytecode *bc, char *s); /* write string */
-extern void bytecodeWriteStrI(bytecode *bc, char *s); /* write string and ignore idata mode */
-extern void bytecodeWriteIdt(bytecode *bc, char *s); /* same as bytecodeWriteStr, uses different signature byte */
-extern void bytecodeWriteCall(bytecode *bc, node *n); /* write a function call */
-extern void bytecodeWriteVarAcc(bytecode *bc, node *n); /* write a variable access node */
-extern void bytecodeWriteInc(bytecode *bc, node *n); /* increment operator (++) */
-extern void bytecodeWriteDec(bytecode *bc, node *n); /* decrement operator (--) */
-extern void bytecodeWriteBinOp(bytecode *bc, node *n); /* binary operation */
-extern void bytecodeWriteUnOp(bytecode *bc, node *n); /* unary operation */
-extern void bytecodeWriteGetItem(bytecode *bc, node *n); /* getitem (arr[idx]) */
-extern void bytecodeWriteSetItem(bytecode *bc, node *n); /* setitem (arr[idx] = (?);) */
-extern void bytecodeWriteInclude(bytecode *bc, node *n); /* include a file */
+extern void bytecodeAdd(bytecode *, unsigned char); /* add byte to byte array */
+extern void bytecodeAddIdat(bytecode *, char *); /* idata (independant data) mode only */
+extern void bytecodeComp(bytecode *); /* compile node */
+extern void bytecodeWrite(bytecode *, node *); /* write node */
+extern void bytecodeWriteHeader(bytecode *); /* write bytecode file header */
+extern void bytecodeWriteErrInf(bytecode *, unsigned int, unsigned int); /* write error info */
+extern void bytecodeWriteFileInf(bytecode *, char *); /* write a file name to change current file attribute */
+extern void bytecodeWriteInt(bytecode *, int); /* write integer */
+extern void bytecodeWriteIntNS(bytecode *, int); /* write integer without signature byte in beginning */
+extern void bytecodeWriteStr(bytecode *, char *); /* write string */
+extern void bytecodeWriteStrI(bytecode *, char *); /* write string and ignore idata mode */
+extern void bytecodeWriteIdt(bytecode *, char *); /* same as bytecodeWriteStr, uses different signature byte */
+extern void bytecodeWriteCall(bytecode *, node *); /* write a function call */
+extern void bytecodeWriteVarAcc(bytecode *, node *); /* write a variable access node */
+extern void bytecodeWriteInc(bytecode *, node *); /* increment operator (++) */
+extern void bytecodeWriteDec(bytecode *, node *); /* decrement operator (--) */
+extern void bytecodeWriteBinOp(bytecode *, node *); /* binary operation */
+extern void bytecodeWriteUnOp(bytecode *, node *); /* unary operation */
+extern void bytecodeWriteGetItem(bytecode *, node *); /* getitem (arr[idx]) */
+extern void bytecodeWriteSetItem(bytecode *, node *); /* setitem (arr[idx] = (?);) */
+extern void bytecodeWriteVarUndefined(bytecode *, node *); /* undefined variable */
+extern void bytecodeWriteVarNew(bytecode *, node *); /* new variable */
+extern void bytecodeWriteInclude(bytecode *, node *); /* include a file */
 
-extern void bytecodePrintf(bytecode *bc); /* print bytecode data in hexdump style */
-extern void bytecodeFree(bytecode *bc); /* free a bytecode object */
+extern void bytecodePrintf(bytecode *); /* print bytecode data in hexdump style */
+extern void bytecodeFree(bytecode *); /* free a bytecode object */
 
 #endif /* _BYTECODE_H */

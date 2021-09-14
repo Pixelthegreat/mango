@@ -120,7 +120,10 @@ extern int run(char *fname, int bc_mode) {
 			errorPrint();
 			return -1;
 		}
-
+		
+		/* print bc data */
+		bytecodePrintf(bc);
+		
 		/* we can now free lexer and parser */
 		node *pn = p->pn; /* save node */
 		parserFree(p);

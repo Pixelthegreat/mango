@@ -9,6 +9,9 @@ unsigned int status_flags = 0x00000000;
 char **filename_list = NULL; /* list of file names */
 int filename_len = 0; /* length of filename list */
 
+/* help information */
+static char *hlp_inf = "usage: mango [filename] [options]\n\noptions:\n\t-cl\t\tcompile library\n\t-cm\t\tcompile bytecode executable\n\t-i\t\tidata mode\n\t-h\t\tdisplay help\n\t--help\t\tsame as '-h'\n\t-l [lib]\tspecify a library to run with\n\nbuild: 2021-09-14\n";
+
 /* set flag */
 extern int argparse_set_flag(unsigned int flag) {
 
@@ -98,11 +101,21 @@ extern int argparse(int argc, char **argv) {
 		/* one argument */
 		if (!strcmp(argv[argidx], "-cl") ||
 			!strcmp(argv[argidx], "-cm") ||
-			!strcmp(argv[argidx], "-i")) {
+			!strcmp(argv[argidx], "-i")  ||
+			!strcmp(argv[argidx], "-h")  ||
+			!strcmp(argv[argidx], "--help")) {
+
+			int agp_res; /* result of argparse_one function */
 
 			/* call one arg function */
-			if (argparse_one(argv[argidx++]) <= -1)
+			if ((agp_res = argparse_one(argv[argidx++])) <= -1)
 				return -1; /* return error code */
+
+			/* leave immediately with no error */
+			else if (agp_res == 1) {
+
+				return 1;
+			}
 		}
 
 		/* two arguments */
@@ -124,6 +137,15 @@ extern int argparse(int argc, char **argv) {
 			argidx += 2;
 		}
 
+		/* unknown argument */
+		else if (argv[argidx][0] == '-') {
+
+			/* unrecognized option */
+			fprintf(stderr, "Unrecognized option '%s'\n", argv[argidx]);
+
+			return -1; /* error */
+		}
+
 		/* filename */
 		else {
 
@@ -138,18 +160,16 @@ extern int argparse(int argc, char **argv) {
 			/* add item */
 			filename_list[filename_len++] = argv[argidx];
 
-			/* print filename */
-			printf("FILENAME: %s\n", argv[argidx]);
 			argidx++; /* advance to next argument */
 		}
 	}
+
+	/* no error */
+	return 0;
 }
 
 /* argparse one arg */
 extern int argparse_one(char *a) {
-
-	/* print option */
-	printf("OPTION: %s\n", a);
 
 	/* idata flag */
 	if (!strcmp(a, "-i")) {
@@ -175,14 +195,23 @@ extern int argparse_one(char *a) {
 			return -1;
 	}
 
+	/* print help info and exit */
+	else if (!strcmp(a, "-h") || !strcmp(a, "--help")) {
+
+		/* print string */
+		printf("%s\n", hlp_inf);
+
+		/* return 1 to signify that nothing has gone wrong, but we want to exit anyway */
+		return 1;
+	}
+
 	return 0;
 }
 
 /* argparse two args */
 extern int argparse_two(char *a, char *b) {
 
-	/* print values */
-	printf("OPTION: %s\nVALUE: %s\n", a, b);
+	/* do nothing ... */
 
 	return 0;
 }
