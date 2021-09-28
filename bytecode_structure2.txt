@@ -3,7 +3,7 @@ To distingiush a regular bytecode program from a library, bytecodes and librarie
 BYTECODE_HEADER: 0b "m" "c" 0e
 LIBRARY_HEADER: 0b "m" "l" 0f
 
-D1 9F "int" 00 9F "x" 00 00 00 00 0A --
+D1 9F "int" 00 9F "x" 00 9B 00 00 00 0A -- ('int x = 10;')
 
 D1: Variable declaration
 9F: Start of text
@@ -12,6 +12,7 @@ D1: Variable declaration
 9F: Start of text
 "x": Actual text (will be in bytes)
 00: End of text
+9B: Integer
 00 00 00 0A: 32-bit integer for number 10
 
 --!
@@ -26,10 +27,20 @@ D3: Variable Increment (x++;)
 D4: Variable Decrement (x--;)
 D5: Function call
 D6: Variable Access
+D7: Variable Declaration with no value (Undefined Variable)
+D8: If Statement
+D9: While Loop
+DA: For Loop
+DB: Function Declaration
+DC: Function Definition
 9F: Start of Text (identifier)
 9E: Start of String
 00: End of anything, number
 9D: Start of binary operation
 9C: Start of unary operation
 9B: Integer signature
+9A: GetItem
 E0: Start of library reference (.ml libraries only)
+FE: Error information (line and column)
+FF: Change filename to
+FD: Idata mode (independant data, data stored at end of file rather than in middle of function calls and nodes)

@@ -2,12 +2,18 @@
 #define _RUN_H
 
 #include <stdlib.h> /* stdlib */
+#include "mango.h" /* all headers */
 
 /* mango context */
 typedef struct {
 	char **fnames; /* file names */
 	int flen; /* number of file names */
 	int bc_mode; /* mode for bytecode */
+
+	/* extra stuff */
+	lexer *lex; /* lexer instance */
+	parser *parse; /* parser instance */
+	int e; /* resulting error code */
 } mango_ctx;
 
 /* functions */
@@ -16,6 +22,7 @@ extern void mango_ctx_free(mango_ctx *); /* free a mango context */
 extern int mango_ctx_run(mango_ctx *); /* run from context */
 
 extern int run(char *, int); /* run a single file */
+extern mango_ctx runlp(char *, char *, unsigned int, unsigned int); /* lex and parse a single file, return parsed node */
 
 /* run directly instead of creating context */
 static inline int run_all(char **fnames, int flen, int bc_mode) {

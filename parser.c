@@ -1647,8 +1647,11 @@ extern node *parserCall(parser *p) {
 			return n;
 		}
 
+		unsigned int _pflag_include_vardec = pflag_include_vardec;
+		pflag_include_vardec = 0;
 		node *next = parserExpr(p); /* next node in list */
-		
+		pflag_include_vardec = _pflag_include_vardec;
+
 		/* error */
 		if (next == NULL || errorIsSet()) {
 
@@ -1667,7 +1670,10 @@ extern node *parserCall(parser *p) {
 			parserAdvance(p);
 
 			/* get next node */
+			_pflag_include_vardec = pflag_include_vardec;
+			pflag_include_vardec = 0;
 			node *next = parserExpr(p);
+			pflag_include_vardec = _pflag_include_vardec;
 
 			/* error */
 			if (next == NULL || errorIsSet()) {

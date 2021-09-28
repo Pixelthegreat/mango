@@ -1,8 +1,12 @@
 /* header */
 #include "bytecode.h"
 #include "error.h" /* errors */
+#include "run.h" /* runlp */
 #include <stdlib.h> /* malloc, realloc, free */
 #include <string.h> /* strcmp */
+
+/* variables */
+char *old_fname_1 = NULL;
 
 /* get a character */
 extern unsigned int bytecodeGetc(unsigned char c) {
@@ -62,8 +66,12 @@ extern void bytecodeAddIdat(bytecode *bc, char *s) {
 		bc->idata = (char **)realloc(bc->idata, bc->i_cap);
 	}
 
+	/* malloc data */
+	char *s2 = (char *)malloc(strlen(s)+2);
+	strcpy(s2, s);
+
 	/* add data */
-	bc->idata[bc->i_len++] = s;
+	bc->idata[bc->i_len++] = s2;
 }
 
 /* compile node */
@@ -225,7 +233,75 @@ extern void bytecodeWrite(bytecode *bc, node *n) {
 		bytecodeWriteErrInf(bc, n->lineno, n->colno);
 	}
 
+	/* if statement */
+	else if (n->type == NODE_IFNODE) {
+
+		/* write node */
+		bytecodeWriteIfStatement(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* while loop */
+	else if (n->type == NODE_WHILENODE) {
+
+		/* write node */
+		bytecodeWriteWhile(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* for loop */
+	else if (n->type == NODE_FORNODE) {
+
+		/* write node */
+		bytecodeWriteFor(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* function declaration */
+	else if (n->type == NODE_FUNCDEC) {
+
+		/* write node */
+		bytecodeWriteFuncDec(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* function definition */
+	else if (n->type == NODE_FUNCDEF) {
+		
+		/* write node */
+		bytecodeWriteFuncDef(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* extern */
+	else if (n->type == NODE_EXTERN) {
+
+		/* write node */
+		bytecodeWriteExtern(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* include a file */
+	else if (n->type == NODE_INCLUDE) {
+
+		char *fn = bc->curr_fname;
+
+		/* write file info */
+		bytecodeWriteFileInf(bc, n->tokens[0]->t_value);
+		bc->prev_fname = n->tokens[0]->t_value;
+		bc->curr_fname = n->tokens[0]->t_value;
+
+		/* write node */
+		bytecodeWriteInclude(bc, n, n->tokens[0]->t_value);
+
+		/* write file info */
+		bytecodeWriteFileInf(bc, fn);
+		bc->prev_fname = fn;
+		bc->curr_fname = fn;
+	}
+
 	else {
+
 		/* unimplemented */
 		errorSet(ERROR_TYPE_BYTECODE,
 				 ERROR_CODE_BYTECODEUNIMPL,
@@ -555,6 +631,189 @@ extern void bytecodeWriteVarNew(bytecode *bc, node *n) {
 	bytecodeWrite(bc, n->children[n->values[0]]);
 }
 
+/* write an if statement */
+extern void bytecodeWriteIfStatement(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xD8);
+
+	/* write condition node */
+	bytecodeWrite(bc, n->children[0]);
+
+	/* write number of body nodes */
+	bytecodeWriteInt(bc, n->n_of_children-1);
+
+	/* write body nodes */
+	for (unsigned int i = 1; i < n->n_of_children; i++)
+		bytecodeWrite(bc, n->children[i]);
+}
+
+/* write a while loop */
+extern void bytecodeWriteWhile(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xD9);
+
+	/* write condition node */
+	bytecodeWrite(bc, n->children[0]);
+
+	/* write number of body nodes */
+	bytecodeWriteInt(bc, n->n_of_children-1);
+
+	/* write body nodes */
+	for (unsigned int i = 1; i < n->n_of_children; i++)
+		bytecodeWrite(bc, n->children[i]);
+}
+
+/* write a for loop */
+extern void bytecodeWriteFor(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xDA);
+
+	/* write condition nodes */
+	for (int i = 0; i < 3; i++)
+		bytecodeWrite(bc, n->children[i]);
+
+	/* write number of body nodes */
+	bytecodeWriteInt(bc, n->n_of_children-3);
+
+	/* write body nodes */
+	for (int j = 3; j < n->n_of_children; j++)
+		bytecodeWrite(bc, n->children[j]);
+}
+
+/* write function declaration */
+extern void bytecodeWriteFuncDec(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xDB);
+
+	/* write function return type and function name */
+	bytecodeWriteIdt(bc, n->tokens[0]->t_value);
+	bytecodeWriteIdt(bc, n->tokens[1]->t_value);
+
+	/* return type is pointer */
+	bytecodeAdd(bc, (unsigned char)n->values[0]);
+
+	/* write number of arguments */
+	bytecodeWriteInt(bc, (n->n_of_tokens - 2) / 2);
+
+	/* write arguments */
+	for (unsigned int i = 2; i < n->n_of_tokens; i += 2) {
+
+		/* write argument type and name */
+		bytecodeWriteIdt(bc, n->tokens[i]->t_value);
+		bytecodeWriteIdt(bc, n->tokens[i+1]->t_value);
+
+		/* is it a pointer */
+		bytecodeAdd(bc, (unsigned char)n->values[((i - 2) / 2) + 1]);
+	}
+}
+
+/* write a function definition */
+extern void bytecodeWriteFuncDef(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xDC);
+
+	/* write child */
+	bytecodeWrite(bc, n->children[0]);
+
+	/* write number of body nodes */
+	bytecodeWriteInt(bc, n->n_of_children-1);
+
+	/* write body nodes */
+	for (unsigned int i = 1; i < n->n_of_children; i++)
+		bytecodeWrite(bc, n->children[i]);
+}
+
+/* write an external reference */
+extern void bytecodeWriteExtern(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xDD);
+
+	/* write child */
+	bytecodeWrite(bc, n->children[0]);
+}
+
+/* write include file */
+extern void bytecodeWriteInclude(bytecode *bc, node *n, char *fname) {
+
+	/* run code */
+	mango_ctx ctx = runlp(fname, n->fname, n->lineno, n->colno);
+
+	/* error */
+	if (ctx.e) {
+
+		/* raise error to stop system */
+		errorSet(ERROR_TYPE_BREAK, 0, NULL);
+		return;
+	}
+
+	/* write node */
+	bytecodeWrite(bc, ctx.parse->pn);
+
+	/* free l and p */
+	node *pn = ctx.parse->pn;
+	parserFree(ctx.parse);
+	lexerFree(ctx.lex);
+	nodeFree(pn);
+}
+
+/* finish with bytecode */
+extern void bytecodeFinish(bytecode *bc) {
+
+	/* all we really have to do in this situation is check if we are in a mode which requires us to write to a file, which in this case, we will */
+	if (bc->mode == BYTECODE_CLIB || bc->mode == BYTECODE_CMP) {
+
+		/* get final file extension */
+		char *ext = (bc->mode == BYTECODE_CLIB)? "ml": "mc";
+
+		/* get position of last dot */
+		int dotcnt = 0; /* number of dots counted */
+		int curdotpos = 0; /* current dot position */
+
+		char c; /* current character */
+
+		for (int i = 0; i < strlen(bc->curr_fname); i++) {
+
+			/* get dot */
+			if ((c = bc->curr_fname[i]) == '.') {
+
+				dotcnt++;
+				curdotpos = i;
+			}
+		}
+
+		/* no dots found */
+		if (!dotcnt) curdotpos = strlen(bc->curr_fname);
+		else curdotpos++; /* this will need to be the position AFTER the dot */
+
+		/* create filename buffer */
+		char *mb = (char *)malloc(strlen(bc->curr_fname) + 4);
+		strcpy(mb, bc->curr_fname);
+		strcpy(mb + curdotpos, ext);
+
+		printf("compiling to '%s'...\n", mb);
+
+		/* open file */
+		FILE *fp = fopen(mb, "wb");
+
+		/* write to file */
+		fwrite(bc->bytes, 1, bc->len, fp);
+
+		/* close file */
+		fclose(fp);
+
+		/* free buffer and print highly important message */
+		free(mb);
+
+		printf("done.\n");
+	}
+}
+
 /* print bytecode data hexdump style */
 extern void bytecodePrintf(bytecode *bc) {
 
@@ -633,6 +892,11 @@ extern void bytecodeFree(bytecode *bc) {
 
 	/* free */
 	free(bc->bytes);
+
+	/* free idata */
+	for (unsigned int i = 0; i < bc->i_len; i++)
+		free(bc->idata[i]);
+
 	free(bc->idata);
 	free(bc);
 }

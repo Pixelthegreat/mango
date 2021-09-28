@@ -5,6 +5,7 @@
 #include <stdlib.h> /* malloc/realloc/free, etc */
 #include <string.h> /* strcpy, strlen, etc */
 #include <stdio.h> /* sprintf, printf, etc */
+#include <unistd.h> /* more io */
 
 /* list of all objects */
 object **objects = NULL;
@@ -247,7 +248,8 @@ extern void objectWrite(int fd, object *value) {
 	}
 
 	/* write to descriptor */
-	fputs((char *)(((object *)value->value)->value), FILEGET(fd));
+	char *val = (char *)(((object *)value->value)->value);
+	write(fd, val, strlen(val));
 
 	/* debug */
 	#if defined(DEBUG) && DEBUG == 1

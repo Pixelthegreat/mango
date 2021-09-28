@@ -10,7 +10,7 @@ char **filename_list = NULL; /* list of file names */
 int filename_len = 0; /* length of filename list */
 
 /* help information */
-static char *hlp_inf = "usage: mango [filename] [options]\n\noptions:\n\t-cl\t\tcompile library\n\t-cm\t\tcompile bytecode executable\n\t-i\t\tidata mode\n\t-h\t\tdisplay help\n\t--help\t\tsame as '-h'\n\t-l [lib]\tspecify a library to run with\n\nbuild: 2021-09-14\n";
+static char *hlp_inf = "usage: mango [filename] [options]\n\noptions:\n\t-cl\t\tcompile library\n\t-cm\t\tcompile bytecode executable\n\t-i\t\tidata mode\n\t-h\t\tdisplay help\n\t--help\t\tsame as '-h'\n\t-l [lib]\tspecify a library to run with\n\nbuild: 2021-09-27\n";
 
 /* set flag */
 extern int argparse_set_flag(unsigned int flag) {

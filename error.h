@@ -7,6 +7,7 @@
 #define ERROR_TYPE_RUNTIME 1
 #define ERROR_TYPE_BYTECODE 2
 #define ERROR_TYPE_INTERNAL 3
+#define ERROR_TYPE_BREAK 100
 
 /* error codes */
 /* interal errors start at 0 */

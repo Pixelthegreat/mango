@@ -42,8 +42,8 @@ extern unsigned int errorIsSet() {
 /* print the error */
 extern void errorPrint() {
 
-	/* we can't print an error if it hasn't been set */
-	if (!is_error)
+	/* we can't print an error if it hasn't been set or if it's type is ERROR_TYPE_BREAK */
+	if (!is_error || error_type == ERROR_TYPE_BREAK)
 		return;
 
 	/* calculate error name */

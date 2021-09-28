@@ -59,7 +59,14 @@ extern void bytecodeWriteGetItem(bytecode *, node *); /* getitem (arr[idx]) */
 extern void bytecodeWriteSetItem(bytecode *, node *); /* setitem (arr[idx] = (?);) */
 extern void bytecodeWriteVarUndefined(bytecode *, node *); /* undefined variable */
 extern void bytecodeWriteVarNew(bytecode *, node *); /* new variable */
-extern void bytecodeWriteInclude(bytecode *, node *); /* include a file */
+extern void bytecodeWriteIfStatement(bytecode *, node *); /* if statement */
+extern void bytecodeWriteWhile(bytecode *, node *); /* while loop */
+extern void bytecodeWriteFor(bytecode *, node *); /* for loop */
+extern void bytecodeWriteFuncDec(bytecode *, node *); /* function declaration */
+extern void bytecodeWriteFuncDef(bytecode *, node *); /* function definition */
+extern void bytecodeWriteExtern(bytecode *, node *); /* external ref */
+extern void bytecodeWriteInclude(bytecode *, node *, char *); /* include a file */
+extern void bytecodeFinish(bytecode *); /* finish bytecode */
 
 extern void bytecodePrintf(bytecode *); /* print bytecode data in hexdump style */
 extern void bytecodeFree(bytecode *); /* free a bytecode object */
