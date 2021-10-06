@@ -217,6 +217,14 @@ extern void bytecodeWrite(bytecode *bc, node *n) {
 		bytecodeWriteErrInf(bc, n->lineno, n->colno);
 	}
 
+	/* setitem */
+	else if (n->type == NODE_SETITEM) {
+
+		/* write node */
+		bytecodeWriteSetItem(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
 	/* undefined variable */
 	else if (n->type == NODE_VARUN) {
 
@@ -281,6 +289,38 @@ extern void bytecodeWrite(bytecode *bc, node *n) {
 		bytecodeWriteErrInf(bc, n->lineno, n->colno);
 	}
 
+	/* typedef */
+	else if (n->type == NODE_TYPEDEF) {
+
+		/* write node */
+		bytecodeWriteTypeDef(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* struct */
+	else if (n->type == NODE_STRUCT) {
+
+		/* write node */
+		bytecodeWriteStruct(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* variable assignment */
+	else if (n->type == NODE_VARASSIGN) {
+
+		/* write node */
+		bytecodeWriteVarAsg(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
+	/* else node */
+	else if (n->type == NODE_ELSENODE) {
+
+		/* write node */
+		bytecodeWriteElse(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
+	}
+
 	/* include a file */
 	else if (n->type == NODE_INCLUDE) {
 
@@ -298,6 +338,14 @@ extern void bytecodeWrite(bytecode *bc, node *n) {
 		bytecodeWriteFileInf(bc, fn);
 		bc->prev_fname = fn;
 		bc->curr_fname = fn;
+	}
+
+	/* const, unsigned, return */
+	else if (n->type == NODE_CONST || n->type == NODE_UNSIGNED || n->type == NODE_RETURN) {
+
+		/* write node */
+		bytecodeWriteCUR(bc, n);
+		bytecodeWriteErrInf(bc, n->lineno, n->colno);
 	}
 
 	else {
@@ -580,8 +628,30 @@ extern void bytecodeWriteGetItem(bytecode *bc, node *n) {
 		bytecodeWriteIdt(bc, n->tokens[i]->t_value);
 	}
 
-	/* write node */
+	/* write index node */
 	bytecodeWrite(bc, n->children[0]);
+}
+
+/* setitem ([] = ?) */
+extern void bytecodeWriteSetItem(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xDD);
+
+	/* write number of tokens */
+	bytecodeWriteInt(bc, n->n_of_tokens);
+
+	/* write each name */
+	for (unsigned int i = 0; i < n->n_of_tokens; i++) {
+
+		bytecodeWriteIdt(bc, n->tokens[i]->t_value);
+	}
+
+	/* write index node */
+	bytecodeWrite(bc, n->children[0]);
+
+	/* write value node */
+	bytecodeWrite(bc, n->children[1]);
 }
 
 /* write a new variable */
@@ -732,9 +802,79 @@ extern void bytecodeWriteFuncDef(bytecode *bc, node *n) {
 extern void bytecodeWriteExtern(bytecode *bc, node *n) {
 
 	/* write sigbyte */
-	bytecodeAdd(bc, 0xDD);
+	bytecodeAdd(bc, 0xC1);
 
 	/* write child */
+	bytecodeWrite(bc, n->children[0]);
+}
+
+/* write const, unsigned, or return */
+extern void bytecodeWriteCUR(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, (n->type == NODE_CONST? 0xDE: (n->type == NODE_UNSIGNED? 0xDF: 0xC0)));
+
+	/* write child node */
+	bytecodeWrite(bc, n->children[0]);
+}
+
+/* write struct info */
+extern void bytecodeWriteStruct(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xC2);
+
+	/* write name of struct */
+	bytecodeWriteIdt(bc, n->tokens[0]->t_value);
+
+	/* write number of nodes */
+	bytecodeWriteInt(bc, n->n_of_children);
+
+	/* struct value nodes */
+	for (unsigned int i = 0; i < n->n_of_children; i++) {
+
+		bytecodeWrite(bc, n->children[i]);
+	}
+}
+
+/* write typedef */
+extern void bytecodeWriteTypeDef(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xC3);
+
+	/* write values and tokens */
+	bytecodeAdd(bc, (unsigned char)n->values[0]);
+	bytecodeWriteIdt(bc, n->tokens[0]->t_value);
+	bytecodeWriteIdt(bc, n->tokens[1]->t_value);
+}
+
+/* write else */
+extern void bytecodeWriteElse(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xC4);
+
+	/* write child node */
+	bytecodeWrite(bc, n->children[0]);
+}
+
+/* write variable assignment */
+extern void bytecodeWriteVarAsg(bytecode *bc, node *n) {
+
+	/* write sigbyte */
+	bytecodeAdd(bc, 0xD2);
+
+	/* number of names */
+	bytecodeWriteInt(bc, n->n_of_tokens);
+
+	/* write variable name tokens */
+	for (unsigned int i = 0; i < n->n_of_tokens; i++) {
+
+		bytecodeWriteIdt(bc, n->tokens[i]->t_value);
+	}
+
+	/* write value */
 	bytecodeWrite(bc, n->children[0]);
 }
 

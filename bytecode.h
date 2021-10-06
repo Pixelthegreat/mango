@@ -51,6 +51,7 @@ extern void bytecodeWriteStrI(bytecode *, char *); /* write string and ignore id
 extern void bytecodeWriteIdt(bytecode *, char *); /* same as bytecodeWriteStr, uses different signature byte */
 extern void bytecodeWriteCall(bytecode *, node *); /* write a function call */
 extern void bytecodeWriteVarAcc(bytecode *, node *); /* write a variable access node */
+extern void bytecodeWriteVarAsg(bytecode *, node *); /* write a variable assign node */
 extern void bytecodeWriteInc(bytecode *, node *); /* increment operator (++) */
 extern void bytecodeWriteDec(bytecode *, node *); /* decrement operator (--) */
 extern void bytecodeWriteBinOp(bytecode *, node *); /* binary operation */
@@ -65,6 +66,10 @@ extern void bytecodeWriteFor(bytecode *, node *); /* for loop */
 extern void bytecodeWriteFuncDec(bytecode *, node *); /* function declaration */
 extern void bytecodeWriteFuncDef(bytecode *, node *); /* function definition */
 extern void bytecodeWriteExtern(bytecode *, node *); /* external ref */
+extern void bytecodeWriteCUR(bytecode *, node *); /* const, unsigned, or return */
+extern void bytecodeWriteStruct(bytecode *, node *); /* struct */
+extern void bytecodeWriteTypeDef(bytecode *, node *); /* type definition */
+extern void bytecodeWriteElse(bytecode *, node *); /* else */
 extern void bytecodeWriteInclude(bytecode *, node *, char *); /* include a file */
 extern void bytecodeFinish(bytecode *); /* finish bytecode */
 
