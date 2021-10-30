@@ -8,7 +8,7 @@
 #define HAS_NODE				1 /* node system */
 #define HAS_FILE				1 /* file system */
 #define HAS_OBJECT				1 /* object system */
-#define HAS_VM					0 /* bytecode interpreter */
+#define HAS_VM					1 /* bytecode interpreter */
 #define HAS_BYTECODE			1 /* bytecode compiler */
 #define HAS_NAMES				1 /* name system */
 #define HAS_ERROR				1 /* error handling */
@@ -36,10 +36,13 @@
 
 #if HAS_OBJECT == 1 /* object system */
 #include "object.h"
+#include "arrayobject.h"
+#include "intobject.h"
 #endif
 
 #if HAS_VM == 1 /* bytecode virtual machine */
 #include "vm.h"
+#include "context.h"
 #endif
 
 #if HAS_BYTECODE == 1 /* bytecode compiler */
@@ -65,5 +68,19 @@
 #if HAS_RUN == 1 /* run a file */
 #include "run.h"
 #endif
+
+/* good idea to undefine constants */
+#undef HAS_PARSER
+#undef HAS_TOKEN
+#undef HAS_NODE
+#undef HAS_FILE
+#undef HAS_OBJECT
+#undef HAS_VM
+#undef HAS_BYTECODE
+#undef HAS_NAMES
+#undef HAS_ERROR
+#undef HAS_EXTENSION
+#undef HAS_ARGPARSE
+#undef HAS_RUN
 
 #endif /* _MANGO_H */

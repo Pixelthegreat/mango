@@ -1,11 +1,18 @@
 #include "object.h"
 #include "error.h" /* error handling */
 #include "file.h" /* basic file handling system */
+#include "arrayobject.h" /* array */
+#include "intobject.h" /* integers and chars */
+#include "pointerobject.h" /* pointer */
+#include "token.h" /* yes */
 
 #include <stdlib.h> /* malloc/realloc/free, etc */
 #include <string.h> /* strcpy, strlen, etc */
 #include <stdio.h> /* sprintf, printf, etc */
 #include <unistd.h> /* more io */
+
+/* forward declarations */
+static object *intcharobjectNew(int isch, int val);
 
 /* list of all objects */
 object **objects = NULL;
@@ -13,9 +20,9 @@ int n_of_objects; /* number of objects stored in list */
 int cap_objects; /* capacity of object list */
 
 /* create an object */
-extern object *objectNew(unsigned char type) {
+extern object *objectNew(unsigned char type, size_t size) {
 	
-	object *o = (object*)malloc(sizeof(object)); /* new object! :D */
+	object *o = (object*)malloc(size); /* new object! :D */
 
 	/* we have failed */
 	if (o == NULL) {
@@ -31,7 +38,6 @@ extern object *objectNew(unsigned char type) {
 	/* set our values */
 	o->type = type;
 	o->refcnt = 0; /* can be freed if it needs to */
-	o->value = (unsigned long)0; /* no value YET */
 	
 	o->lineno = 0;
 	o->colno = 0;
@@ -69,121 +75,137 @@ extern object *objectNew(unsigned char type) {
 	return o; /* last piece of the puzzle */
 }
 
-/* create an integer */
-extern object *objectNewInt(int value) {
+/* perform operation on object */
+extern object *objectOperation(object *obj, object *other, unsigned int op_num) {
 
-	/* get object */
-	object *o = objectNew(OBJECT_INT);
+	/* must be same types */
+	if (obj->type != other->type) {
 
-	/* failed :( */
-	if (o == NULL)
+		/* set an error */
+		errorSet(ERROR_TYPE_RUNTIME, ERROR_CODE_ILLEGALOP,
+				 "Illegal operation");
+		errorSetPos(obj->lineno, obj->colno, obj->fname);
+
+		/* return NULL */
 		return NULL;
+	}
 
-	/* pun the value */
-	o->value = (unsigned long)*(unsigned int *)&value;
-	return o;
+	/* '+' */
+	if (op_num == TOKEN_PLUS) {
+
+		/* integer */
+		if (obj->type == OBJECT_INT)
+			return intobjectNew(O_INT(obj)->val + O_INT(other)->val);
+	}
+
+	/* '-' */
+	else if (op_num == TOKEN_MINUS) {
+
+		/* integer */
+		if (obj->type == OBJECT_INT)
+			return intobjectNew(O_INT(obj)->val - O_INT(other)->val);
+	}
+
+	/* '*' */
+	else if (op_num == TOKEN_MUL) {
+
+		/* integer */
+		if (obj->type == OBJECT_INT)
+			return intobjectNew(O_INT(obj)->val * O_INT(other)->val);
+	}
+
+	/* '/' */
+	else if (op_num == TOKEN_DIV) {
+
+		/* integer */
+		if (obj->type == OBJECT_INT)
+			return intobjectNew(O_INT(obj)->val / O_INT(other)->val);
+	}
+
+	/* create error */
+	errorSet(ERROR_TYPE_RUNTIME, ERROR_CODE_ILLEGALOP,
+			 "Illegal operation");
+	errorSetPos(obj->lineno, obj->colno, obj->fname);
+
+	/* exit */
+	return NULL;
 }
 
-/* create string */
-extern object *objectNewString(char *value) {
+/* create an array object */
+extern object *arrayobjectNew(int n, unsigned char t) {
 
-	/* get object */
-	object *o = objectNew((OBJECT_CHR | OBJECT_ARRAY));
+	/* malloc new array object */
+	arrayobject *a = (arrayobject *)objectNew(t | OBJECT_ARRAY, sizeof(arrayobject) + (n * sizeof(O_TPSZ(t))));
 
-	/* failed :( */
-	if (o == NULL)
+	/* :( */
+	if (a == NULL)
 		return NULL;
 
-	/* malloc new string and copy contents */
-	unsigned int value_len = strlen(value);
-	char *dyn = (char *)malloc(value_len + 2);
-	strcpy(dyn, value);
+	/* assign values */
+	a->lineno = 0;
+	a->colno = 0;
+	a->fname = NULL;
+	a->refcnt = 0;
+	a->n_len = n;
+	a->n_sz = 0;
+	a->n_start = ((void *)a + sizeof(arrayobject));
+}
 
-	/* store value and return */
-	o->value = (unsigned long)dyn;
-	return objectNewPointer(o);
+/* create an integer */
+extern object *intobjectNew(int val) {
+
+	/* return a thing */
+	return intcharobjectNew(0, val);
 }
 
 /* create a char */
-extern object *objectNewChar(char value) {
+extern object *charobjectNew(char val) {
 
-	/* get object */
-	object *o = objectNew(OBJECT_CHR);
+	/* return another thing */
+	return intcharobjectNew(1, val);
+}
 
-	/* failed :( */
+/* create an integer or character */
+extern object *intcharobjectNew(int isch, int val) {
+
+	/* allocate object */
+	size_t sz = isch? sizeof(intobject): sizeof(charobject);
+	object *o = objectNew(isch? OBJECT_CHR: OBJECT_INT, sz);
+
+	/* failed to allocate */
 	if (o == NULL)
 		return NULL;
 
-	/* pun the value */
-	o->value = (unsigned long)*(unsigned char *)&value;
+	/* set value */
+	if (isch) O_CHR(o)->val = (char)val;
+	else O_INT(o)->val = val;
+
+	/* return object */
 	return o;
 }
 
-/* create a pointer object */
-extern object *objectNewPointer(object *vo) {
+/* create a pointer */
+extern object *pointerobjectNew(int tp, void *p) {
 
-	/* get object */
-	object *o = objectNew(POINTER(vo->type));
+	/* create object */
+	object *o = objectNew((unsigned char)(tp | OBJECT_POINTER), sizeof(pointerobject));
 
-	/* failed :( */
+	/* failed to allocate */
 	if (o == NULL)
 		return NULL;
 
-	/* pun the value */
-	o->value = (unsigned long)vo;
+	/* set value */
+	O_PTR(o)->val = p;
+
+	/* return object */
 	return o;
 }
 
 /* free an object */
 extern void objectFree(object *obj) {
 
-	/* free string if necessary */
-	if (obj->type == OBJECT_STR)
-		free((char *)(((object *)obj->value)->value));
-
 	/* free the object */
 	free(obj);
-}
-
-/* perform an operation on an object and return a new object */
-extern object *objectOperation(object *obj, object *other, unsigned int op_num) {
-
-	/* compare types */
-	if (obj->type != other->type) {
-		if (!errorIsSet()) {
-			errorSet(ERROR_TYPE_RUNTIME,
-					 ERROR_CODE_INVALIDTYPE,
-					 "Mismatched types");
-			errorSetPos(obj->lineno, obj->colno, obj->fname);
-		}
-
-		return NULL;
-	}
-
-	/* '+' */
-	if (op_num == OPERATION_PLUS) {
-		/* integer addition */
-		if (obj->type == OBJECT_INT)
-			return objectNewInt((*(int*)obj->value) + (*(int*)other->value));
-	}
-
-	/* '-' */
-	if (op_num == OPERATION_MINUS) {
-		/* integer substraction */
-		if (obj->type == OBJECT_INT)
-			return objectNewInt((*(int*)obj->value) + (*(int*)other->value));
-	}
-
-	/* set error */
-	if (!errorIsSet()) {
-		errorSet(ERROR_TYPE_RUNTIME,
-								ERROR_CODE_ILLEGALOP,
-								"Illegal Operation");
-		errorSetPos(obj->lineno, obj->colno, obj->fname);
-	}
-
-	/* not fully implemented :( */
-	return NULL;
 }
 
 extern void objectCollect() {
@@ -204,71 +226,4 @@ extern void objectFreeAll() {
 
 	/* free object list */
 	free(objects);
-}
-
-extern object *objectRepresent(object *obj) {
-
-	/* string */
-	if (obj->type == OBJECT_STR)
-		return obj;
-
-	/* int */
-	else if (obj->type == OBJECT_INT) {
-		char buf[100]; /* string buffer */
-		sprintf(buf, "%d", *(int*)obj->value); /* result */
-		return objectNewString(buf);
-	}
-
-	/* char */
-	else if (obj->type == OBJECT_CHR) {
-		char buf[2]; /* string buffer */
-		buf[0] = *(char*)obj->value;
-		buf[1] = '\0';
-		return objectNewString(buf);
-	}
-
-	/* otherwise */
-	return NULL;
-}
-
-extern void objectWrite(int fd, object *value) {
-
-	/* can only write string value */
-	if (value->type != OBJECT_STR) {
-
-		/* set error */
-		if (!errorIsSet()) {
-			errorSet(ERROR_TYPE_RUNTIME,
-					 ERROR_CODE_ILLEGALOP,
-					 "Mismatched types");
-			errorSetPos(value->lineno, value->colno, value->fname);
-		}
-
-		return;
-	}
-
-	/* write to descriptor */
-	char *val = (char *)(((object *)value->value)->value);
-	write(fd, val, strlen(val));
-
-	/* debug */
-	#if defined(DEBUG) && DEBUG == 1
-	printf("[DEBUG] Successfully wrote to descriptor %d.\n", fd);
-	#endif
-}
-
-extern void objectPrint(object *obj) {
-	objectWrite(FD_CONSOLE, objectRepresent(obj));
-}
-
-/* for future: remove this warning after it is no longer needed */
-#warning the function 'objectRead' is currently being rewritten and as such shall not be used in any code.
-
-/* read text from file */
-extern object *objectRead(int fd) {
-
-	/* return fileReadFD */
-	//return objectNewString(fileReadLine(fd));
-
-	return NULL;
 }

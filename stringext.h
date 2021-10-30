@@ -19,5 +19,6 @@
 extern char *dfgets(FILE *f); /* get string from file */
 extern char *dgets(); /* get stdin string */
 extern char *dstrcat(char *a, char *b); /* concatenate two strings and return new buffer as result */
+extern char *fngext(char *fn); /* get extension for filename */
 
 #endif /* _STRINGEXT_H */

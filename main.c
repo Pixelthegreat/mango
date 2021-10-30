@@ -60,13 +60,6 @@ int main(int argc, char **argv) {
 	objectFreeAll();
 
 	#else
-	
-	/* create an object */
-	object *o = objectNewString("hello, world!\n");
-
-	objectWrite(1, o);
-
-	objectFreeAll();
 
 	#endif
 	return 0;

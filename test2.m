@@ -1,0 +1,1 @@
+chr *s = "hello, world!";

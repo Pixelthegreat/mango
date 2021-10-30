@@ -1,6 +1,8 @@
 #include "run.h" /* header */
+#include "stringext.h" /* fngext */
 #include <stdlib.h> /* memory */
 #include <stdio.h> /* printf, fprintf, ... */
+#include <string.h>
 
 /* create a new context */
 extern mango_ctx *mango_ctx_new(char **fnames, int flen, int bc_mode) {
@@ -132,6 +134,44 @@ extern mango_ctx runlp(char *fname, char *bfn, unsigned int lineno, unsigned int
 /* run a single file */
 extern int run(char *fname, int bc_mode) {
 
+	/* get extension */
+	char *ext = fngext(fname);
+
+	/* ext = ml? */
+	if (ext != NULL && !strcmp(ext, "ml")) {
+
+		/* print an error */
+		fprintf(stderr, "Cannot run MangoLib files!\n");
+		return -1;
+	}
+
+	/* ext = mc? */
+	if (ext != NULL && !strcmp(ext, "mc")) {
+
+		/* create a vm and execute code */
+		vm *v = vmNewFromFile(fname);
+
+		/* error */
+		if (v == NULL)
+			return -1;
+
+		/* execute vm code */
+		vmExec(v);
+
+		/* close vm */
+		vmFree(v);
+
+		/* check if the error is set */
+		if (errorIsSet()) {
+
+			/* print the error and exit */
+			errorPrint();
+			return -1;
+		}
+
+		return 0;
+	}
+
 	/* open a file */
 	FILE *f = fopen(fname, "r");
 
@@ -210,17 +250,39 @@ extern int run(char *fname, int bc_mode) {
 		/* figure out what to do with bytecode */
 		bytecodeFinish(bc);
 		
-		/* print bc data */
-		bytecodePrintf(bc);
-		
 		/* we can now free lexer and parser */
 		node *pn = p->pn; /* save node */
 		parserFree(p);
 		lexerFree(l);
 		if (pn != NULL) nodeFree(pn); /* free node */
 
-		/* for the moment, just free bytecode */
-		bytecodeFree(bc);
+		/* if we are executing a file directly */
+		if (bc_mode == BYTECODE_EX) {
+
+			/* create a vm */
+			vm *v = vmNew(bc);
+
+			/* free bytecode */
+			bytecodeFree(bc);
+
+			/* execute code */
+			vmExec(v);
+
+			/* close vm */
+			vmFree(v);
+
+			/* check if error is set */
+			if (errorIsSet()) {
+
+				/* print and exit */
+				errorPrint();
+				return -1;
+			}
+		}
+		else {
+
+			bytecodeFree(bc);
+		}
 	}
 
 	else {

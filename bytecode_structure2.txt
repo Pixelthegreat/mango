@@ -33,9 +33,17 @@ D9: While Loop
 DA: For Loop
 DB: Function Declaration
 DC: Function Definition
+DD: SetItem
+DE: Const
+DF: Unsigned
+C0: Return
+C1: Extern
+C2: Struct
+C3: TypeDef
+C4: Else
 9F: Start of Text (identifier)
 9E: Start of String
-00: End of anything, number
+00: End of anything
 9D: Start of binary operation
 9C: Start of unary operation
 9B: Integer signature

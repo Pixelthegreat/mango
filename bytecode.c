@@ -4,6 +4,7 @@
 #include "run.h" /* runlp */
 #include <stdlib.h> /* malloc, realloc, free */
 #include <string.h> /* strcmp */
+#include <sys/stat.h> /* stat */
 
 /* variables */
 char *old_fname_1 = NULL;
@@ -680,7 +681,7 @@ extern void bytecodeWriteVarUndefined(bytecode *bc, node *n) {
 extern void bytecodeWriteVarNew(bytecode *bc, node *n) {
 
 	/* write sigbyte */
-	bytecodeAdd(bc, 0xD7);
+	bytecodeAdd(bc, 0xD1);
 
 	/* has value */
 	bytecodeAdd(bc, 0x01);

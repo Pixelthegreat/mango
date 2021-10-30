@@ -1,5 +1,7 @@
 # add -g flag
 CCFLAGS = -g
+# for libdlopen
+LDFLAGS = -ldl
 
 # cross compile
 ifdef CROSS_COMPILE
@@ -8,8 +10,8 @@ else
 	CC = gcc
 endif
 
-output: main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o
-	$(CC) $(CCFLAGS) main.o object.o error.o names.o token.o node.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o -o mango
+output: main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o
+	$(CC) $(CCFLAGS) $(LDFLAGS) main.o object.o error.o names.o token.o node.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o -o mango
 
 main.o: main.c mango.h
 	$(CC) -c main.c $(CCFLAGS)
@@ -47,5 +49,13 @@ argparse.o: argparse.c argparse.h
 run.o: run.c run.h
 	$(CC) -c run.c $(CCFLAGS)
 
+context.o: context.c context.h
+	$(CC) -c context.c $(CCFLAGS)
+
+vm.o: vm.c vm.h
+	$(CC) -c vm.c $(CCFLAGS)
+
 clean:
 	rm *.o mango
+
+install:

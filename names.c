@@ -1,6 +1,7 @@
 #include "names.h" /* header */
 #include "object.h" /* object */
 #include "error.h" /* error handling */
+#include "arrayobject.h" /* array object */
 #include <stdlib.h> /* malloc, realloc, free */
 #include <string.h> /* strcmp */
 #include <stdio.h> /* printf */
@@ -105,7 +106,7 @@ extern object *namesGet(nameTable *nt, char *name) {
 extern object *namesGetFromString(nameTable *nt, object *obj) {
 
 	/* get object */
-	object *o = namesGet(nt, (char *)obj->value);
+	object *o = namesGet(nt, O_ARRAY(obj)->n_start);
 
 	/* create appropriate error if needed */
 	if (o == NULL) {

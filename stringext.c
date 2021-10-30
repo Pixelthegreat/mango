@@ -47,3 +47,29 @@ char *dgets() {
 	/* return buffer */
 	return dfgets(stdin);
 }
+
+/* get file extension pointer from filename */
+extern char *fngext(char *fn) {
+
+	/* variables */
+	int dotcnt = 0; /* dot count */
+	int finaldot = 0; /* final dot position */
+
+	/* loop through the string entirely */
+	for (int i = 0; i < strlen(fn); i++) {
+
+		/* '.' */
+		if (fn[i] == '.') {
+
+			dotcnt++;
+			finaldot = i;
+		}
+	}
+
+	/* no dots */
+	if (dotcnt == 0)
+		return NULL;
+
+	/* otherwise */
+	return &fn[finaldot+1];
+}
