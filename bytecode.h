@@ -1,3 +1,24 @@
+/*
+ *
+ * Copyright 2021, Elliot Kohlmyer
+ *
+ * This file is part of Mango.
+ *
+ * Mango is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Mango is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 /* bytecode.h -- bytecode compiler */
 #ifndef _BYTECODE_H
 #define _BYTECODE_H
@@ -71,9 +92,13 @@ extern void bytecodeWriteStruct(bytecode *, node *); /* struct */
 extern void bytecodeWriteTypeDef(bytecode *, node *); /* type definition */
 extern void bytecodeWriteElse(bytecode *, node *); /* else */
 extern void bytecodeWriteInclude(bytecode *, node *, char *); /* include a file */
+extern void bytecodeInsertInt(bytecode *, unsigned int, int); /* insert an integer at location */
 extern void bytecodeFinish(bytecode *); /* finish bytecode */
 
 extern void bytecodePrintf(bytecode *); /* print bytecode data in hexdump style */
 extern void bytecodeFree(bytecode *); /* free a bytecode object */
+
+extern char **lib_fnames;
+extern int lib_fnames_len;
 
 #endif /* _BYTECODE_H */

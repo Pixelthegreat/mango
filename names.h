@@ -1,8 +1,48 @@
+/*
+ *
+ * Copyright 2021, Elliot Kohlmyer
+ *
+ * This file is part of Mango.
+ *
+ * Mango is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Mango is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 /* names.h -- variable naming system */
 #ifndef _NAMES_H
 #define _NAMES_H
 
-#include "object.h"
+#ifndef _OBJECT_H
+
+/* object head */
+#define OB_HEAD 	unsigned int refcnt; /* number of references */ \
+	unsigned char type; /* type of object */ \
+	unsigned int lineno; /* for errors */ \
+	unsigned int colno; /* for errors */ \
+	char *fname; /* for errors */
+
+/* object */
+typedef struct {
+	OB_HEAD
+} object;
+
+#define INCREF(o) (o->refcnt++)
+#define DECREF(o) (o->refcnt--)
+#define XINCREF(o) if (o != NULL) (o->refcnt++)
+#define XDECREF(o) if (o != NULL) (o->refcnt--)
+
+#endif
 
 /* name table for storing names */
 typedef struct _nameTable {
@@ -19,6 +59,7 @@ extern void namesSet(nameTable *nt, char *name, object *value); /* add a value t
 extern unsigned int namesIndex(nameTable *nt, char *name); /* get the index of a name if it has been found */
 extern object *namesGet(nameTable *nt, char *name); /* get a name's value if the name is found */
 extern object *namesGetFromString(nameTable *nt, object *obj); /* get a value from a string name */
+extern object *namesGetN(nameTable *nt, char *name, int n); /* same as namesGet, but n controls whether or not to check the parent name table as well */
 extern void namesFree(nameTable *nt); /* free a table */
 
 #endif /* _NAMES_H */

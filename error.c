@@ -1,3 +1,24 @@
+/*
+ *
+ * Copyright 2021, Elliot Kohlmyer
+ *
+ * This file is part of Mango.
+ *
+ * Mango is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Mango is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 #include "error.h"
 
 #include <stdio.h>
@@ -56,16 +77,16 @@ extern void errorPrint() {
 	else if (error_type == ERROR_TYPE_BYTECODE)
 		error_name = "Bytecode Error";
 	else if (error_type == ERROR_TYPE_INTERNAL)
-		error_name = "Interal Error";
+		error_name = "Internal Error";
 
 	/* get file name */
 	char *fname = error_fname;
 
 	if (fname == NULL)
-		fname = (char*)"<stdin>";
+		fname = (char*)"(null)";
 
 	/* print the error */
-	printf("%s (File \'%s\', Line %u, Column %u):\n  %s\n", error_name, fname, error_lineno, error_colno, error_message);
+	fprintf(stderr, "%s (File \'%s\', Line %u, Column %u):\n  %s\n", error_name, fname, error_lineno, error_colno, error_message);
 }
 
 /* clear the error status */

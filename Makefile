@@ -10,13 +10,15 @@ else
 	CC = gcc
 endif
 
-output: main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o
+all: mango
+
+mango: main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o
 	$(CC) $(CCFLAGS) $(LDFLAGS) main.o object.o error.o names.o token.o node.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o -o mango
 
 main.o: main.c mango.h
 	$(CC) -c main.c $(CCFLAGS)
 
-object.o: object.c object.h
+object.o: object.c object.h intobject.h arrayobject.h structobject.h functionobject.h
 	$(CC) -c object.c $(CCFLAGS)
 
 error.o: error.c error.h

@@ -1,5 +1,27 @@
+/*
+ *
+ * Copyright 2021, Elliot Kohlmyer
+ *
+ * This file is part of Mango.
+ *
+ * Mango is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Mango is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 #include "argparse.h" /* header */
 #include "bytecode.h" /* bytecode types */
+#include "object.h" /* DEBUGging */
 #include <string.h> /* string functions */
 #include <stdio.h> /* printf, fprintf */
 #include <stdlib.h> /* malloc, realloc, free */
@@ -10,7 +32,8 @@ char **filename_list = NULL; /* list of file names */
 int filename_len = 0; /* length of filename list */
 
 /* help information */
-static char *hlp_inf = "usage: mango [filename] [options]\n\noptions:\n\t-cl\t\tcompile library\n\t-cm\t\tcompile bytecode executable\n\t-i\t\tidata mode\n\t-h\t\tdisplay help\n\t--help\t\tsame as '-h'\n\t-l [lib]\tspecify a library to run with\n\nbuild: development\n";
+static char *hlp_inf = "usage: %s [filename] [options]\n\noptions:\n\t-cl       compile library\n\t-cm       compile bytecode executable\n\t-i        idata mode\n\t-h        display help\n\t--help    same as '-h'\n\t-l [lib]  specify a library to run with\n\t-d        print debug info\n\n";
+extern char *prog_name;
 
 /* set flag */
 extern int argparse_set_flag(unsigned int flag) {
@@ -43,14 +66,6 @@ extern int argparse_flag2bcm() {
 
 		/* print error and return */
 		fprintf(stderr, "No input file(s) specified\n");
-		return -1;
-	}
-
-	/* invalid number of files (to be changed) */
-	if (filename_len > 1) {
-
-		/* print error and return */
-		fprintf(stderr, "Cannot accept multiple files\n");
 		return -1;
 	}
 
@@ -103,6 +118,7 @@ extern int argparse(int argc, char **argv) {
 			!strcmp(argv[argidx], "-cm") ||
 			!strcmp(argv[argidx], "-i")  ||
 			!strcmp(argv[argidx], "-h")  ||
+			!strcmp(argv[argidx], "-d")  ||
 			!strcmp(argv[argidx], "--help")) {
 
 			int agp_res; /* result of argparse_one function */
@@ -125,7 +141,7 @@ extern int argparse(int argc, char **argv) {
 			if ((argidx + 1) >= argc) {
 
 				/* print error */
-				fprintf(stderr, "Expected argument value\n");
+				fprintf(stderr, "Expected argument value (%s)\n", argv[argidx]);
 				return -1; /* return error code */
 			}
 
@@ -148,6 +164,14 @@ extern int argparse(int argc, char **argv) {
 
 		/* filename */
 		else {
+
+			/* invalid number of files (to be changed) */
+			if (filename_len >= 1) {
+
+				/* print error and return */
+				fprintf(stderr, "Cannot accept multiple files\n");
+				return -1;
+			}
 
 			/* create filename list if necessary */
 			if (filename_list == NULL)
@@ -199,10 +223,17 @@ extern int argparse_one(char *a) {
 	else if (!strcmp(a, "-h") || !strcmp(a, "--help")) {
 
 		/* print string */
-		printf("%s\n", hlp_inf);
+		printf(hlp_inf, prog_name);
 
 		/* return 1 to signify that nothing has gone wrong, but we want to exit anyway */
 		return 1;
+	}
+
+	/* print debug info for interpreter */
+	else if (!strcmp(a, "-d")) {
+
+		/* set value */
+		DEBUG = 1;
 	}
 
 	return 0;
@@ -211,7 +242,20 @@ extern int argparse_one(char *a) {
 /* argparse two args */
 extern int argparse_two(char *a, char *b) {
 
-	/* do nothing ... */
+	/* library */
+	if (!strcmp(a, "-l")) {
+
+		/* create filename list if necessary */
+		if (filename_list == NULL)
+			filename_list = (char **)malloc(sizeof(char *));
+
+		/* reallocate list */
+		else
+			filename_list = (char **)realloc(filename_list, sizeof(char *) * (filename_len + 1));
+
+		/* add item */
+		filename_list[filename_len++] = b;
+	}
 
 	return 0;
 }

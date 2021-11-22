@@ -19,31 +19,26 @@
  *
  */
 
-/* integer objects */
-#ifndef _INTOBJECT_H
-#define _INTOBJECT_H
+/* struct object */
+#ifndef _STRUCTOBJECT_H
+#define _STRUCTOBJECT_H
 
 #include "object.h"
 
-/* intobject for ints */
-typedef struct {
+/* structobject */
+typedef struct _structobject {
 	OB_HEAD
-	int val; /* value for integer */
-} intobject;
-
-/* charobject for chars */
-typedef struct {
-	OB_HEAD
-	char val; /* value for char */
-} charobject;
+	struct _structobject *parent; /* pointer to parent struct */
+	nameTable *nt; /* table of names */
+	char *struct_name; /* name of struct */
+	int is_templ; /* template = how the structure will look, otherwise = actual instance of struct */
+} structobject;
 
 /* macros */
-#define O_CHR(o) ((charobject *)(o))
-#define O_INT(o) ((intobject *)(o))
+#define O_STRUCT(o) ((structobject *)(o))
 
 /* functions */
-extern object *intobjectNew(int val);
-extern object *charobjectNew(char val);
-extern object *intcharobjectNew(int isch, int val);
+extern object *structobjectNew(context *ctx);
+extern object *structobjectInstance(object *s);
 
-#endif /* _INTOBJECT_H */
+#endif /* _STRUCTOBJECT_H */

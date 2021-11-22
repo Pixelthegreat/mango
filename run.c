@@ -1,3 +1,24 @@
+/*
+ *
+ * Copyright 2021, Elliot Kohlmyer
+ *
+ * This file is part of Mango.
+ *
+ * Mango is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Mango is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 #include "run.h" /* header */
 #include "stringext.h" /* fngext */
 #include <stdlib.h> /* memory */
@@ -111,6 +132,13 @@ extern mango_ctx runlp(char *fname, char *bfn, unsigned int lineno, unsigned int
 			/* return context */
 			return ctx;
 		}
+
+		/* debug info */
+		if (DEBUG) {
+
+			printf("\nPARSER:\n");
+			nodePrintTree(p->pn);
+		}
 	}
 	/* error */
 	else {
@@ -141,7 +169,7 @@ extern int run(char *fname, int bc_mode) {
 	if (ext != NULL && !strcmp(ext, "ml")) {
 
 		/* print an error */
-		fprintf(stderr, "Cannot run MangoLib files!\n");
+		fprintf(stderr, "Cannot (directly) run MangoLib files (use the '-l' option)!\n");
 		return -1;
 	}
 
@@ -157,9 +185,6 @@ extern int run(char *fname, int bc_mode) {
 
 		/* execute vm code */
 		vmExec(v);
-
-		/* close vm */
-		vmFree(v);
 
 		/* check if the error is set */
 		if (errorIsSet()) {
@@ -229,6 +254,13 @@ extern int run(char *fname, int bc_mode) {
 			return -1;
 		}
 
+		/* debug info */
+		if (DEBUG) {
+
+			printf("\nPARSER:\n");
+			nodePrintTree(p->pn);
+		}
+
 		/* create bytecode */
 		bytecode *bc = bytecodeNew(p->pn, bc_mode);
 		bc->is_idat = argparse_get_flag(FLAG_IDATA);
@@ -245,6 +277,13 @@ extern int run(char *fname, int bc_mode) {
 			/* print error and exit */
 			errorPrint();
 			return -1;
+		}
+
+		/* debug info */
+		if (DEBUG) {
+
+			printf("\nBYTECODE:\n");
+			bytecodePrintf(bc);
 		}
 
 		/* figure out what to do with bytecode */
@@ -265,11 +304,14 @@ extern int run(char *fname, int bc_mode) {
 			/* free bytecode */
 			bytecodeFree(bc);
 
+			/* debug info */
+			if (DEBUG) {
+
+				printf("\nVM:\n");
+			}
+
 			/* execute code */
 			vmExec(v);
-
-			/* close vm */
-			vmFree(v);
 
 			/* check if error is set */
 			if (errorIsSet()) {

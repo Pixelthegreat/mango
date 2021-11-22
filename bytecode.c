@@ -1,3 +1,24 @@
+/*
+ *
+ * Copyright 2021, Elliot Kohlmyer
+ *
+ * This file is part of Mango.
+ *
+ * Mango is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Mango is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 /* header */
 #include "bytecode.h"
 #include "error.h" /* errors */
@@ -8,6 +29,8 @@
 
 /* variables */
 char *old_fname_1 = NULL;
+char **lib_fnames; /* filenames for libs */
+int lib_fnames_len; /* length of lib_fnames */
 
 /* get a character */
 extern unsigned int bytecodeGetc(unsigned char c) {
@@ -87,6 +110,24 @@ extern void bytecodeComp(bytecode *bc) {
 
 	/* write filename */
 	bytecodeWriteFileInf(bc, bc->curr_fname);
+
+	/* libraries */
+	if (lib_fnames != NULL) {
+
+		for (int i = 0; i < lib_fnames_len; i++) {
+
+			/* write string */
+			bytecodeAdd(bc, 0xE0);
+
+			for (int k = 0; k < strlen(lib_fnames[i]); k++)
+				bytecodeAdd(bc, lib_fnames[i][k]);
+
+			bytecodeAdd(bc, '.');
+			bytecodeAdd(bc, 'm');
+			bytecodeAdd(bc, 'l');
+			bytecodeAdd(bc, 0);
+		}
+	}
 
 	/* compile */
 	bytecodeWrite(bc, bc->n);
@@ -429,6 +470,16 @@ extern void bytecodeWriteInt(bytecode *bc, int i) {
 	bytecodeAdd(bc, i & 0xFF);
 }
 
+/* integer */
+extern void bytecodeInsertInt(bytecode *bc, unsigned int l, int i) {
+
+	/* insert values */
+	bc->bytes[l] = ((i >> 24) & 0xFF);
+	bc->bytes[l+1] = ((i >> 16) & 0xFF);
+	bc->bytes[l+2] = ((i >> 8) & 0xFF);
+	bc->bytes[l+3] = (i & 0xFF);
+}
+
 /* write an integer without signature byte */
 extern void bytecodeWriteIntNS(bytecode *bc, int i) {
 
@@ -714,9 +765,17 @@ extern void bytecodeWriteIfStatement(bytecode *bc, node *n) {
 	/* write number of body nodes */
 	bytecodeWriteInt(bc, n->n_of_children-1);
 
+	/* integer for length of body nodes */
+	unsigned int bcl_n = (bc->len + 1);
+	bytecodeWriteInt(bc, 0);
+	unsigned int bcl = bc->len;
+
 	/* write body nodes */
 	for (unsigned int i = 1; i < n->n_of_children; i++)
 		bytecodeWrite(bc, n->children[i]);
+
+	/* change original number */
+	bytecodeInsertInt(bc, bcl_n, bc->len - bcl);
 }
 
 /* write a while loop */
@@ -731,9 +790,17 @@ extern void bytecodeWriteWhile(bytecode *bc, node *n) {
 	/* write number of body nodes */
 	bytecodeWriteInt(bc, n->n_of_children-1);
 
+	/* integer for length of body nodes */
+	unsigned int bcl_n = (bc->len + 1);
+	bytecodeWriteInt(bc, 0);
+	unsigned int bcl = bc->len;
+
 	/* write body nodes */
 	for (unsigned int i = 1; i < n->n_of_children; i++)
 		bytecodeWrite(bc, n->children[i]);
+
+	/* change original number */
+	bytecodeInsertInt(bc, bcl_n, bc->len - bcl);
 }
 
 /* write a for loop */
@@ -742,16 +809,27 @@ extern void bytecodeWriteFor(bytecode *bc, node *n) {
 	/* write sigbyte */
 	bytecodeAdd(bc, 0xDA);
 
-	/* write condition nodes */
-	for (int i = 0; i < 3; i++)
+	/* write two of the condition nodes */
+	for (int i = 0; i < 2; i++)
 		bytecodeWrite(bc, n->children[i]);
 
 	/* write number of body nodes */
 	bytecodeWriteInt(bc, n->n_of_children-3);
 
+	/* write size of nodes in for loop body */
+	unsigned int bcl_n = (bc->len + 1);
+	bytecodeWriteInt(bc, 0);
+	unsigned int bcl = bc->len;
+
 	/* write body nodes */
 	for (int j = 3; j < n->n_of_children; j++)
 		bytecodeWrite(bc, n->children[j]);
+
+	/* write increment node */
+	bytecodeWrite(bc, n->children[2]);
+
+	/* add number */
+	bytecodeInsertInt(bc, bcl_n, bc->len - bcl);
 }
 
 /* write function declaration */
@@ -794,9 +872,17 @@ extern void bytecodeWriteFuncDef(bytecode *bc, node *n) {
 	/* write number of body nodes */
 	bytecodeWriteInt(bc, n->n_of_children-1);
 
+	/* add an integer that will be used to determine how many bytes will the function body use */
+	unsigned int bcl_n = (bc->len + 1);
+	bytecodeWriteInt(bc, 0);
+	unsigned int bcl = bc->len;
+
 	/* write body nodes */
 	for (unsigned int i = 1; i < n->n_of_children; i++)
 		bytecodeWrite(bc, n->children[i]);
+
+	/* insert value */
+	bytecodeInsertInt(bc, bcl_n, bc->len - bcl);
 }
 
 /* write an external reference */

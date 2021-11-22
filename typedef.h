@@ -19,31 +19,26 @@
  *
  */
 
-/* integer objects */
-#ifndef _INTOBJECT_H
-#define _INTOBJECT_H
+/* type definition system */
+#ifndef _TYPEDEF_H
+#define _TYPEDEF_H
 
+#ifndef NOOBJECT
 #include "object.h"
+#endif
 
-/* intobject for ints */
+/* type struct */
 typedef struct {
 	OB_HEAD
-	int val; /* value for integer */
-} intobject;
-
-/* charobject for chars */
-typedef struct {
-	OB_HEAD
-	char val; /* value for char */
-} charobject;
-
-/* macros */
-#define O_CHR(o) ((charobject *)(o))
-#define O_INT(o) ((intobject *)(o))
+	char *tp_name; /* name of type */
+	unsigned char tp_type; /* type of type */
+} typeobject;
 
 /* functions */
-extern object *intobjectNew(int val);
-extern object *charobjectNew(char val);
-extern object *intcharobjectNew(int isch, int val);
+extern typeobject *typeNew(char *tp_name, unsigned char tp_type); /* creates a new type */
+extern void typeRegister(char *tp_name, unsigned char tp_type); /* creates a new type and adds it to a list */
 
-#endif /* _INTOBJECT_H */
+/* macros */
+#define O_TYPE(o) ((typeobject *)(o))
+
+#endif /* _TYPEDEF_H */
