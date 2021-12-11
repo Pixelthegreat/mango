@@ -30,6 +30,7 @@ typedef struct _structobject {
 	OB_HEAD
 	struct _structobject *parent; /* pointer to parent struct */
 	nameTable *nt; /* table of names */
+	context *ctx; /* context */
 	char *struct_name; /* name of struct */
 	int is_templ; /* template = how the structure will look, otherwise = actual instance of struct */
 } structobject;
@@ -38,7 +39,7 @@ typedef struct _structobject {
 #define O_STRUCT(o) ((structobject *)(o))
 
 /* functions */
-extern object *structobjectNew(context *ctx);
+extern object *structobjectNew(context *ctx, char *struct_name);
 extern object *structobjectInstance(object *s);
 
 #endif /* _STRUCTOBJECT_H */

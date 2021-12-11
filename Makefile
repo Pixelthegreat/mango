@@ -61,3 +61,7 @@ clean:
 	rm *.o mango
 
 install:
+	sudo cp -v mango /usr/bin/
+
+uninstall:
+	sudo rm -v /usr/bin/mango

@@ -23,26 +23,9 @@
 #ifndef _NAMES_H
 #define _NAMES_H
 
-#ifndef _OBJECT_H
+#include <stdlib.h>
 
-/* object head */
-#define OB_HEAD 	unsigned int refcnt; /* number of references */ \
-	unsigned char type; /* type of object */ \
-	unsigned int lineno; /* for errors */ \
-	unsigned int colno; /* for errors */ \
-	char *fname; /* for errors */
-
-/* object */
-typedef struct {
-	OB_HEAD
-} object;
-
-#define INCREF(o) (o->refcnt++)
-#define DECREF(o) (o->refcnt--)
-#define XINCREF(o) if (o != NULL) (o->refcnt++)
-#define XDECREF(o) if (o != NULL) (o->refcnt--)
-
-#endif
+#include "obhead.h"
 
 /* name table for storing names */
 typedef struct _nameTable {
@@ -61,5 +44,6 @@ extern object *namesGet(nameTable *nt, char *name); /* get a name's value if the
 extern object *namesGetFromString(nameTable *nt, object *obj); /* get a value from a string name */
 extern object *namesGetN(nameTable *nt, char *name, int n); /* same as namesGet, but n controls whether or not to check the parent name table as well */
 extern void namesFree(nameTable *nt); /* free a table */
+extern nameTable *namesCopy(nameTable *nt); /* copy a table entirely */
 
 #endif /* _NAMES_H */

@@ -4,6 +4,18 @@ A programming language also written in C.
 # updates
 this updates section of the README.md file will only show the latest free updates. For more information, please read the README.md file from older commits or go to the releases/tags section of the repository.
 
+December 11, 2021 - 0.1.1
+The last update of 2021, in preparation for the Christmas break. This update finalizes the feature set by adding structs (although they aren't in a fully working state), as well as the functionality for '&' and '\*' which are for *address of* and *value of* pointer operations, respectively.
+
+Happy Xmas
+
+Added:
+	- Structs (not in a fully-working state yet)
+	- '&' and '\*'
+Modified:
+	- The names system, I only realized a few days ago just how broken it is
+
+
 Nov 22, 2021 - 0.0.1
 The first real update! This update adds the majority of features missing from Mango. The only exceptions are Typedef-ing and Structs. As for the "unsigned" and "const" keywords, i have designed that those would be too unethical and they don't make much sense compared to how much they did in the planning phase for Mango.
 

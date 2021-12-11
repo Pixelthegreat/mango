@@ -63,8 +63,12 @@ extern void objectIntHandler(int n) {
 extern void objectSegvHandler(int n) {
 
 	/* if we have already tried to exit */
-	if (SEGV_SIGNAL)
+	if (SEGV_SIGNAL) {
+		
+		fprintf(stderr, "second segv caught! exiting...\n");
+		quick_exit(0);
 		return;
+	}
 
 	fprintf(stderr, "segmentation fault! exiting...\n");
 	SEGV_SIGNAL = 1;
@@ -72,7 +76,7 @@ extern void objectSegvHandler(int n) {
 }
 
 /* create an object */
-extern object *objectNew(unsigned char type, size_t size) {
+extern object *objectNew(unsigned char type, unsigned int size) {
 	
 	object *o = (object *)malloc(size); /* new object! :D */
 
@@ -94,6 +98,8 @@ extern object *objectNew(unsigned char type, size_t size) {
 	o->lineno = 0;
 	o->colno = 0;
 	o->fname = NULL;
+
+	o->sz = size;
 
 	/* auto initalise list */
 	if (objects == NULL) {
@@ -135,13 +141,109 @@ extern object *objectNew(unsigned char type, size_t size) {
 	return o; /* last piece of the puzzle */
 }
 
+/* copy an object */
+extern object *objectCopy(object *o) {
+
+	object *o2 = objectNew(o->type, o->sz);
+	memcpy(o2, o, o->sz);
+	
+	o->refcnt = 0;
+
+	/* return object */
+	return o2;
+}
+
 /* create a new type */
-extern typeobject *typeNew(char *tp_name, unsigned char tp_type) {
+extern object *typeNew(char *tp_name, unsigned char tp_type) {
 
 	/* create object */
 	object *tp = objectNew(tp_type | OBJECT_TYPE, sizeof(typeobject));
 
 	/* TODO: implement rest of function */
+	O_TYPE(tp)->tp_name = tp_name;
+	O_TYPE(tp)->tp_type = tp_type;
+
+	/* return type */
+	return tp;
+}
+
+/* create and register a new type */
+extern void typeRegister(char *tp_name, unsigned char tp_type) {
+
+	/* create object */
+	object *tp = typeNew(tp_name, tp_type);
+
+	/* create list */
+	if (types == NULL) {
+
+		types_len = 0;
+		types_cap = 8;
+		types = (typeobject **)malloc(sizeof(typeobject *) * types_cap);
+	}
+
+	/* realloc list */
+	if (types_len >= types_cap) {
+
+		types_cap *= 2;
+		types = (typeobject **)realloc(types, sizeof(typeobject *) * types_cap);
+	}
+
+	/* add item */
+	types[types_len++] = O_TYPE(tp);
+}
+
+/* create and register struct type */
+extern void typeRegisterStruct(char *tp_name, object *st) {
+
+	/* create object */
+	object *tp = typeNew(tp_name, OBJECT_STRUCT);
+	O_TYPE(tp)->st = st;
+
+	/* create list */
+	if (types == NULL) {
+
+		types_len = 0;
+		types_cap = 8;
+		types = (typeobject **)malloc(sizeof(typeobject *) * types_cap);
+	}
+
+	/* realloc list */
+	if (types_len >= types_cap) {
+
+		types_cap *= 2;
+		types = (typeobject **)realloc(types, sizeof(typeobject *) * types_cap);
+	}
+
+	/* add item */
+	types[types_len++] = O_TYPE(tp);
+}
+
+/* get a new type */
+extern unsigned char typeGet(char *tp_name) {
+
+	/* loop through types */
+	for (int i = 0; i < types_len; i++) {
+
+		if (!strcmp(types[i]->tp_name, tp_name))
+			return types[i]->tp_type;
+	}
+
+	/* no type */
+	return 0xFF;
+}
+
+/* get a new type */
+extern object *typeobjectGet(char *tp_name) {
+
+	/* loop through types */
+	for (int i = 0; i < types_len; i++) {
+
+		if (!strcmp(types[i]->tp_name, tp_name))
+			return O_OBJ(types[i]);
+	}
+
+	/* no type */
+	return NULL;
 }
 
 /* perform operation on object */
@@ -320,6 +422,12 @@ extern object *arrayobjectNew(int n, unsigned char t) {
 	a->n_len = n;
 	a->n_sz = 0;
 	a->n_start = ((void *)a + sizeof(arrayobject));
+
+	/* clear buffer */
+	memset(a->n_start, 0, (n * sizeof(O_TPSZ(t))));
+
+	/* return object */
+	return O_OBJ(a);
 }
 
 /* create an integer */
@@ -396,6 +504,48 @@ extern object *functionobjectNew(char *func_name, unsigned char rt_type, char **
 	return o;
 }
 
+/* create a new struct */
+extern object *structobjectNew(context *ctx, char *struct_name) {
+
+	/* create new object */
+	object *o = objectNew(OBJECT_STRUCT, sizeof(structobject));
+
+	/* failed to allocate */
+	if (o == NULL)
+		return NULL;
+
+	/* set values */
+	O_STRUCT(o)->struct_name = struct_name;
+	O_STRUCT(o)->ctx = ctx;
+	O_STRUCT(o)->nt = ctx->nt;
+	O_STRUCT(o)->parent = O_STRUCT(o);
+	O_STRUCT(o)->is_templ = 1;
+
+	/* return object */
+	return o;
+}
+
+/* create a new instance of a struct */
+extern object *structobjectInstance(object *s) {
+
+	/* create new object */
+	object *s2 = objectNew(OBJECT_STRUCT, sizeof(structobject));
+
+	/* failed to allocate */
+	if (s2 == NULL)
+		return NULL;
+
+	/* set values */
+	O_STRUCT(s2)->struct_name = O_STRUCT(s)->struct_name;
+	O_STRUCT(s2)->nt = namesCopy(O_STRUCT(s)->ctx->nt);
+	O_STRUCT(s2)->ctx = O_STRUCT(s)->ctx;
+	O_STRUCT(s2)->parent = O_STRUCT(s);
+	O_STRUCT(s2)->is_templ = 0;
+
+	/* return struct */
+	return s2;
+}
+
 /* free an object */
 extern void objectFree(object *obj) {
 
@@ -409,6 +559,24 @@ extern void objectFree(object *obj) {
 		if (DEBUG) printf("[DEBUG] Freed fa_names %p, fa_types %p.\n", O_FUNC(obj)->fa_names, O_FUNC(obj)->fa_types);
 	}
 
+	/* struct */
+	if (obj->type == OBJECT_STRUCT && O_STRUCT(obj)->is_templ) {
+
+		/* free context */
+		contextFree(O_STRUCT(obj)->ctx);
+
+		if (DEBUG) printf("[DEBUG] Freed ctx %p.\n", O_STRUCT(obj)->ctx);
+	}
+
+	/* non-template struct */
+	if (obj->type == OBJECT_STRUCT && !(O_STRUCT(obj)->is_templ)) {
+
+		/* free name table */
+		namesFree(O_STRUCT(obj)->nt);
+
+		if (DEBUG) printf("[DEBUG] Freed nt %p.\n", O_STRUCT(obj)->nt);
+	}
+
 	/* free the object */
 	free(obj);
 }
@@ -419,6 +587,9 @@ extern void objectCollect() {
 	for (int i = 0; i < n_of_objects; i++) {
 
 		if ((objects[i] != NULL) && (objects[i]->refcnt < 1)) {
+
+			/* debug info */
+			if (DEBUG) printf("[DEBUG] Freeing %p with type %d...\n", objects[i], objects[i]->type);
 
 			objectFree(objects[i]);
 
@@ -436,6 +607,9 @@ extern void objectFreeAll() {
 	/* go through list and free all objects. */
 	for (int i = 0; i < n_of_objects; i++) {
 		if (objects[i] != NULL) {
+
+			/* debug info */
+			if (DEBUG) printf("[DEBUG] Freeing %p with type %d...\n", objects[i], objects[i]->type);
 
 			objectFree(objects[i]);
 

@@ -1,12 +1,3 @@
-/* virtual machine bytecode interpreter */
-#include "object.h"
-#include "vm.h"
-#include "arrayobject.h"
-#include "intobject.h"
-#include "pointerobject.h"
-#include "functionobject.h"
-#include "structobject.h"
-#include "error.h"
 /*
  *
  * Copyright 2021, Elliot Kohlmyer
@@ -27,6 +18,18 @@
  * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+
+/* virtual machine bytecode interpreter */
+#include "object.h"
+#include "vm.h"
+#include "arrayobject.h"
+#include "intobject.h"
+#include "pointerobject.h"
+#include "functionobject.h"
+#include "structobject.h"
+#include "typedef.h"
+#include "error.h"
+
 
 #include "token.h"
 #include <stdlib.h>
@@ -157,6 +160,8 @@ extern object *vmHandle(vm *v, unsigned int i) {
 
 	object *o = NULL;
 
+	if (VM_DEBUG) printf("[vm] type %d\n", (((u8 *)v->bc)[i]));
+
 	/* check options */
 
 	/* create a string object */
@@ -232,6 +237,10 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* get object */
 		object *a = vmHandle(v, v->lowbi + v->nofbytes);
 
+		/* get error info */
+		int lineno, colno;
+		vmGetErrorInfo(v, &lineno, &colno);
+
 		/* error */
 		if (a == NULL || errorIsSet())
 			return NULL;
@@ -263,13 +272,39 @@ extern object *vmHandle(vm *v, unsigned int i) {
 			o = a;
 		}
 
+		/* '&' */
+		else if (op == TOKEN_AMP) {
+
+			/* get address */
+			o = pointerobjectNew(a->type, (void *)a);
+		}
+
+		/* '*' */
+		else if (op == TOKEN_MUL) {
+
+			/* not a pointer */
+			if (!(a->type & OBJECT_POINTER) || (O_PTR(a)->val == NULL)) {
+
+				/* set error */
+				errorSet(ERROR_TYPE_RUNTIME,
+						 ERROR_CODE_ILLEGALOP,
+						 "Attempt to dereference a non-pointer");
+				errorSetPos(lineno, colno, v->ctx->fn);
+				return NULL;
+			}
+
+			/* get dereffed value */
+			o = O_OBJ(O_PTR(a)->val);
+		}
+
+		else o = a;
+
 		/* debug info */
 		if (VM_DEBUG) {
 			
 			printf("[vm] interpreted unary operation with op code %d\n", op);
 			if (o->type == OBJECT_INT) printf("[vm] unary operation value is %d\n", O_INT(o)->val);
 		}
-		else o = a;
 	}
 
 	/* binary operation */
@@ -416,8 +451,6 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* not a value */
 		if ((curobj = namesGet(ntc, cn)) == NULL) {
 
-			printf("%s\n", cn);
-
 			/* set error */
 			errorSet(ERROR_TYPE_RUNTIME,
 					 ERROR_CODE_UNDEFINEDNAME,
@@ -494,6 +527,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 			else if ((a->type & 0x3) == OBJECT_CHR) ((char *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val] = O_CHR(val)->val;
 		}
 		else {
+
 			/* set value */
 			namesSet(ntc, cn, val);
 		}
@@ -503,7 +537,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* debug info */
 		if (VM_DEBUG) {
 
-			printf("[vm] set object '%s' with type %d.\n", cn, val->type);
+			printf("[vm] set object '%s' with type %d in nameTable %p.\n", cn, val->type, ntc);
 		}
 	}
 
@@ -532,6 +566,9 @@ extern object *vmHandle(vm *v, unsigned int i) {
 
 		int j = 1;
 
+		nameTable *ntc = v->ctx->nt;
+		context *nctx = v->ctx;
+
 		/* more names */
 		if (n > 1) {
 
@@ -552,17 +589,23 @@ extern object *vmHandle(vm *v, unsigned int i) {
 				} else {
 
 					j++; /* advance */
+
+					/* struct pointer */
+					if (f->type & OBJECT_POINTER)
+						f = O_OBJ(O_PTR(f)->val);
 					
 					/* get next object */
-					f = namesGet(O_STRUCT(f)->nt, first);
+					ntc = O_STRUCT(f)->nt;
+					nctx = O_STRUCT(f)->ctx;
+					f = namesGet(ntc, first);
 
 					/* skip if NULL */
 					if (f == NULL)
 						continue;
 
 					/* if f is a pointer to a struct */
-					if (f->type & OBJECT_POINTER)
-						f = O_OBJ(O_PTR(o)->val);
+					if (f->type == (OBJECT_STRUCT | OBJECT_POINTER))
+						f = O_OBJ(O_PTR(f)->val);
 				}
 			}
 		}
@@ -656,7 +699,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		if (VM_DEBUG) {
 
 			if (_v == 0x9A) printf("[vm] retreived object '%s[%d]' with type %d.\n", first, O_INT(arr_idx)->val, o->type);
-			else printf("[vm] retreived object '%s' with type %d.\n", first, o->type);
+			else printf("[vm] retreived object '%s' with type %d from nameTable %p and context '%s'.\n", first, o->type, ntc, nctx->sn);
 		}
 	}
 
@@ -685,17 +728,30 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		unsigned int f_col;
 		vmGetErrorInfo(v, &f_ln, &f_col);
 
-		/* TODO: add check to typedef'd names; get object type from name */
+		/* get object type from name */
 		if (!strcmp(tp_name, "int")) ob_type = OBJECT_INT | ob_type;
-		else if (!strcmp(tp_name, "chr")) ob_type = OBJECT_CHR | ob_type;
+		else if (!strcmp(tp_name, "chr")) {
+
+			ob_type = OBJECT_CHR | ob_type;
+		}
 		else {
 
-			/* create error */
-			errorSet(ERROR_TYPE_RUNTIME,
-					 ERROR_CODE_ILLEGALOP,
-					 "Illegal operation");
-			errorSetPos(f_ln, f_col, v->ctx->fn);
-			return NULL;
+			/* get type from list */
+			unsigned char tt = typeGet(tp_name);
+
+			/* failed to get type */
+			if (tt == 0xFF) {
+
+				/* set error */
+				errorSet(ERROR_TYPE_RUNTIME,
+						 ERROR_CODE_ILLEGALOP,
+						 "Unknown type");
+				errorSetPos(f_ln, f_col, v->ctx->fn);
+				return NULL;
+			}
+
+			/* set type */
+			ob_type = tt | ob_type;
 		}
 
 		/* get array object */
@@ -734,6 +790,16 @@ extern object *vmHandle(vm *v, unsigned int i) {
 
 			/* create pointer object */
 			o = pointerobjectNew(ob_type & 3, NULL);
+		}
+
+		/* struct */
+		else if (ob_type == OBJECT_STRUCT) {
+
+			/* get struct type object */
+			object *tp = typeobjectGet(tp_name);
+
+			/* copy struct */
+			o = structobjectInstance(O_TYPE(tp)->st);
 		}
 
 		/* otherwise */
@@ -795,17 +861,27 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		if (val == NULL || errorIsSet())
 			return NULL;
 
-		/* TODO: add check to typedef'd names; get object type from name */
+		/* get object type from name */
 		if (!strcmp(tp_name, "int")) ob_type = OBJECT_INT | ob_type;
 		else if (!strcmp(tp_name, "chr")) ob_type = OBJECT_CHR | ob_type;
 		else {
 
-			/* create error */
-			errorSet(ERROR_TYPE_RUNTIME,
-					 ERROR_CODE_ILLEGALOP,
-					 "Illegal operation");
-			errorSetPos(val->lineno, val->colno, v->ctx->fn);
-			return NULL;
+			/* get type from list */
+			unsigned char tt = typeGet(tp_name);
+
+			/* failed to get type */
+			if (tt == 0xFF) {
+
+				/* set error */
+				errorSet(ERROR_TYPE_RUNTIME,
+						 ERROR_CODE_ILLEGALOP,
+						 "Unknown type");
+				errorSetPos(val->lineno, val->colno, val->fname);
+				return NULL;
+			}
+
+			/* set type */
+			ob_type = tt | ob_type;
 		}
 
 		/* mismatched types */
@@ -815,7 +891,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 			errorSet(ERROR_TYPE_RUNTIME,
 					 ERROR_CODE_ILLEGALOP,
 					 "Mismatched types");
-			errorSetPos(val->lineno, val->colno, v->ctx->fn);
+			errorSetPos(val->lineno, val->colno, val->fname);
 			return NULL;
 		}
 
@@ -1145,7 +1221,17 @@ extern object *vmHandle(vm *v, unsigned int i) {
 
 				if (!strcmp(at, "int")) att = OBJECT_INT | att;
 				else if (!strcmp(at, "chr")) att = OBJECT_CHR | att;
-				else err = 1; /* bad type name */
+				else {
+
+					/* get type from list */
+					unsigned char tt = typeGet(at);
+
+					/* failed to get type */
+					if (tt == 0xFF) {
+
+						err = 1;
+					} else att = tt | att;
+				}
 
 				/* add argument type */
 				arg_types[i] = att;
@@ -1163,12 +1249,22 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		else if (!strcmp(tp_name, "chr")) rt_type = OBJECT_CHR | rt_type;
 		else {
 
-			/* set error */
-			errorSet(ERROR_TYPE_RUNTIME,
-					 ERROR_CODE_ILLEGALOP,
-					 "Illegal operation");
-			errorSetPos(lineno, colno, v->ctx->fn);
-			return NULL;
+			/* get type from list */
+			unsigned char tt = typeGet(tp_name);
+
+			/* failed to get type */
+			if (tt == 0xFF) {
+
+				/* set error */
+				errorSet(ERROR_TYPE_RUNTIME,
+						 ERROR_CODE_ILLEGALOP,
+						 "Unknown type");
+				errorSetPos(lineno, colno, v->ctx->fn);
+				return NULL;
+			}
+
+			/* set type */
+			rt_type = tt | rt_type;
 		}
 
 		/* error from previously */
@@ -1436,6 +1532,105 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		o = intobjectNew(0);
 	}
 
+	/* struct */
+	if ((((u8 *)v->bc)[i]) == 0xC2) {
+
+		/* get struct name */
+		v->nofbytes += 2;
+		char *struct_name = &(((char *)v->bc)[v->lowbi + v->nofbytes]);
+		v->nofbytes += strlen(struct_name) + 1;
+
+		/* get number of nodes */
+		v->nofbytes++;
+		int nch = vmGetInt(v, v->lowbi + v->nofbytes);
+		v->nofbytes += 4;
+
+		/* create struct */
+		context *myctx = contextNew(v->ctx->fn, struct_name);
+		myctx->tp = CONTEXT_STRUCT;
+
+		/* backup ctx */
+		context *octx = v->ctx;
+		v->ctx = myctx;
+
+		/* execute bytecode */
+		for (int i = 0; i < nch; i++) {
+
+			/* get object */
+			object *c = vmHandle(v, v->lowbi + v->nofbytes);
+
+			/* error */
+			if (c == NULL || errorIsSet()) {
+
+				/* return */
+				v->ctx = octx;
+				return NULL;
+			}
+		}
+
+		object *st = structobjectNew(myctx, struct_name);
+
+		/* set old ctx */
+		v->ctx = octx;
+
+		/* set struct */
+		namesSet(v->ctx->nt, struct_name, st);
+		typeRegisterStruct(struct_name, st);
+
+		o = st;
+	}
+
+	/* typedef */
+	if ((((u8 *)v->bc)[i]) == 0xC3) {
+
+		/* get pointer value */
+		int is_p = (((u8 *)v->bc)[++v->nofbytes]);
+		v->nofbytes += 2;
+
+		/* get name of old type */
+		char *otp = &(((char *)v->bc)[v->lowbi + v->nofbytes]);
+		v->nofbytes += strlen(otp) + 2;
+
+		/* get name of new type */
+		char *ntp = &(((char *)v->bc)[v->lowbi + v->nofbytes]);
+		v->nofbytes += strlen(ntp) + 1;
+
+		/* get error info */
+		int lineno, colno;
+		vmGetErrorInfo(v, &lineno, &colno);
+
+		/* get type type */
+		unsigned char tp_type = is_p? OBJECT_POINTER: 0;
+		if (!strcmp(otp, "int")) tp_type = OBJECT_INT | tp_type;
+		else if (!strcmp(otp, "chr")) tp_type = OBJECT_CHR | tp_type;
+		else {
+
+			/* get type from list */
+			unsigned char tt = typeGet(otp);
+
+			/* failed to get type */
+			if (tt == 0xFF) {
+
+				/* set error */
+				errorSet(ERROR_TYPE_RUNTIME,
+						 ERROR_CODE_ILLEGALOP,
+						 "Unknown type");
+				errorSetPos(lineno, colno, v->ctx->fn);
+				return NULL;
+			}
+
+			/* set type */
+			tp_type = tt | tp_type;
+		}
+
+		/* set object and type */
+		typeRegister(ntp, tp_type);
+		o = intobjectNew(0);
+
+		/* debug */
+		if (VM_DEBUG) printf("[vm] created type '%s' based off of '%s'\n", ntp, otp);
+	}
+
 	if (VM_DEBUG) printf("[vm] vm scope is '%s' in file '%s'\n", v->ctx->sn, v->ctx->fn);
 
 	if (o == NULL) {
@@ -1470,6 +1665,8 @@ extern object *vmHandle(vm *v, unsigned int i) {
 	/* get error info */
 	vmGetErrorInfo(v, &o->lineno, &o->colno);
 	if (o->fname == NULL) o->fname = v->ctx->fn;
+
+	if (VM_DEBUG) printf("[vm] finished interpreting object.\n");
 
 	return o; /* object */
 }
@@ -1616,6 +1813,19 @@ extern void vmExec(vm *v) {
 		/* library reference */
 		else if (((u8 *)v->bc)[i] == 0xE0) {
 
+			/* interrupt */
+			if (INT_SIGNAL) {
+
+				/* set error */
+				errorSet(ERROR_TYPE_RUNTIME,
+						 ERROR_CODE_KBINT,
+						 "Keyboard interrupt");
+				errorSetPos(0, 0, v->ctx->fn);
+
+				INT_SIGNAL = 0;
+				return;
+			}
+
 			char *fn = vmdctx->fn;
 
 			/* get name of library */
@@ -1659,6 +1869,9 @@ extern void vmExec(vm *v) {
 			/* error */
 			if (co == NULL || errorIsSet())
 				return;
+
+			/* debug */
+			if (VM_DEBUG) printf("[vm] ----\n");
 		}
 
 		objectCollect();

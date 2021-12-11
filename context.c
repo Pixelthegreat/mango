@@ -22,6 +22,7 @@
 /* context system */
 #include "context.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 /* create a context */
 extern context *contextNew(char *fn, char *sn) {

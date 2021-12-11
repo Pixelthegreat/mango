@@ -32,11 +32,15 @@ typedef struct {
 	OB_HEAD
 	char *tp_name; /* name of type */
 	unsigned char tp_type; /* type of type */
+	object *st; /* struct */
 } typeobject;
 
 /* functions */
-extern typeobject *typeNew(char *tp_name, unsigned char tp_type); /* creates a new type */
+extern object *typeNew(char *tp_name, unsigned char tp_type); /* creates a new type */
 extern void typeRegister(char *tp_name, unsigned char tp_type); /* creates a new type and adds it to a list */
+extern void typeRegisterStruct(char *tp_name, object *st); /* registers a struct */
+extern unsigned char typeGet(char *tp_name); /* get a new type */
+extern object *typeobjectGet(char *tp_name); /* get a full type object */
 
 /* macros */
 #define O_TYPE(o) ((typeobject *)(o))

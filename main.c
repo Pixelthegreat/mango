@@ -29,7 +29,15 @@
 #include "mango.h"
 
 char *prog_name; /* program name */
+extern int is_at_end;
 
+/* function to enable some stuff */
+void endHandle() {
+
+	is_at_end = 1;
+}
+
+/* main function */
 int main(int argc, char **argv) {
 
 	prog_name = argv[0]; /* get program name */
@@ -38,6 +46,7 @@ int main(int argc, char **argv) {
 	atexit(objectFreeAll);
 	atexit(vmFreeAll);
 	atexit(argparse_free);
+	atexit(endHandle);
 
 	/* set signal handlers */
 	signal(SIGINT, objectIntHandler); /* Ctrl+C keyboard combination */
@@ -86,6 +95,9 @@ int main(int argc, char **argv) {
 	run(argpfv[0], bc_mode);
 
 	#else
+
+	/* always include this */
+	DEBUG = 1;
 
 	#endif
 

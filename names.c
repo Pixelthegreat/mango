@@ -21,13 +21,17 @@
 
 #include "names.h" /* header */
 #include "error.h" /* error handling */
-#define NOOBJECT
 #include "arrayobject.h" /* array object */
 #include "pointerobject.h" /* pointers */
-#undef NOOBJECT
 #include <stdlib.h> /* malloc, realloc, free */
 #include <string.h> /* strcmp */
 #include <stdio.h> /* printf */
+
+/* forward declarations */
+extern object *objectCopy(object *);
+extern int DEBUG;
+
+int is_at_end = 0;
 
 /* create a name table */
 extern nameTable *namesNew() {
@@ -41,7 +45,8 @@ extern nameTable *namesNew() {
 
 	/* create lists */
 	nt->names = (char **)malloc(sizeof(char *) * 8);
-	nt->values = (object **)malloc(sizeof(char *) * 8);
+	nt->values = (object **)malloc(sizeof(object *) * 8);
+	memset(nt->names, 0, sizeof(char *) * 8);
 
 	/* assign values */
 	nt->n_of_names = 0;
@@ -52,6 +57,48 @@ extern nameTable *namesNew() {
 	return nt;
 }
 
+extern nameTable *namesCopy(nameTable *nt) {
+
+	/* create a new name table */
+	nameTable *nt2 = namesNew();
+
+	/* set values */
+	nt2->n_of_names = nt->n_of_names;
+	nt2->cap_names = nt->cap_names;
+	nt2->parent = nt->parent;
+
+	/* create new name and value lists */
+	nt2->names = (char **)malloc(sizeof(char *) * nt2->cap_names);
+	nt2->values = (object **)malloc(sizeof(object *) * nt2->cap_names);
+	memset(nt2->names, 0, sizeof(char *) * nt2->cap_names);
+
+	/* copy names and values */
+	for (int i = 0; i < nt2->n_of_names; i++) {
+
+		/* create a new name */
+		//char *name = (char *)malloc(strlen(nt->names[i]) + 1);
+		//strcpy(name, nt->names[i]);
+		char *name = nt->names[i];
+
+		/* create a new value */
+		object *o = objectCopy(nt->values[i]);
+
+		/* set name and value */
+		nt2->names[i] = name;
+		nt2->values[i] = o;
+
+		/* reference tracking */
+		XINCREF(o);
+		if (o->type & OBJECT_POINTER)
+			XINCREF(O_OBJ(O_PTR(o)->val));
+	}
+
+	if (DEBUG) printf("[names] Copied %p to %p\n", nt, nt2);
+
+	/* return table */
+	return nt2;
+}
+
 /* set a value to a name */
 extern void namesSet(nameTable *nt, char *name, object *value) {
 
@@ -60,16 +107,16 @@ extern void namesSet(nameTable *nt, char *name, object *value) {
 
 		nt->cap_names *= 2;
 		nt->names = (char **)realloc(nt->names, sizeof(char *) * nt->cap_names);
-		nt->values = (object **)realloc(nt->values, sizeof(char *) * nt->cap_names);
+		nt->values = (object **)realloc(nt->values, sizeof(object *) * nt->cap_names);
 	}
 
 	/* get the index and set values in list */
 	unsigned int idx = namesIndex(nt, name);
 
 	/* new seperate string */
-	char *new_name = (char *)malloc(strlen(name) + 2);
-	strcpy(new_name, name);
-	name = new_name;
+	//char *new_name = (char *)malloc(strlen(name) + 2);
+	//strcpy(new_name, name);
+	//name = new_name;
 
 	/* decrement reference if value is found */
 	if (idx < nt->n_of_names) {
@@ -77,15 +124,17 @@ extern void namesSet(nameTable *nt, char *name, object *value) {
 
 		/* for pointers */
 		if (nt->values[idx]->type & (1 << 3))
-			XINCREF(((object *)(O_PTR(nt->values[idx])->val)));
+			XDECREF(O_OBJ(O_PTR(nt->values[idx])->val));
 	}
 
 	/* increase reference for new value */
 	XINCREF(value);
 
 	/* for pointers */
-	if (value->type & (1 << 3))
-		XINCREF(((object *)(O_PTR(value)->val)));
+	if (value->type & OBJECT_POINTER) {
+
+		XINCREF(O_OBJ(O_PTR(value)->val));
+	}
 
 	/* store stuff */
 	nt->names[idx] = name;
@@ -167,18 +216,29 @@ extern object *namesGetFromString(nameTable *nt, object *obj) {
 /* free a name table */
 extern void namesFree(nameTable *nt) {
 
-	/* free each name */
-	for (int i = 0; i < nt->n_of_names; i++)
-		free(nt->names[i]);
+	if (DEBUG) printf("[names] Freeing %p\n", nt);
 
 	/* decrease references for each object */
 	for (int i = 0; i < nt->n_of_names; i++) {
-		XDECREF(nt->values[i]);
 
-		/* for pointers */
-		if (nt->values[i]->type & (1 << 3))
-			XDECREF(((object *)(O_PTR(nt->values)->val)));
+		if (!is_at_end) {
+
+			/* debug info */
+			if (DEBUG) printf("[names] Dereffing '%s'...\n", nt->names[i]);
+	
+			XDECREF(nt->values[i]);
+	
+			/* for pointers */
+			if (nt->values[i]->type & (1 << 3)) {
+	
+				XDECREF(O_OBJ(O_PTR(nt->values[i])->val));
+			}
+	
+			if (DEBUG) printf("[names] Dereffed '%s'.\n", nt->names[i]);
+		}
 	}
+
+	if (DEBUG) printf("[names] Dereffed all values for nt %p\n", nt);
 
 	/* free lists */
 	free(nt->names);
@@ -186,4 +246,6 @@ extern void namesFree(nameTable *nt) {
 
 	/* free table */
 	free(nt);
+
+	if (DEBUG) printf("[names] Freed nt %p\n", nt);
 }

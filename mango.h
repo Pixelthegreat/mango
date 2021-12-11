@@ -59,6 +59,9 @@
 #include "object.h"
 #include "arrayobject.h"
 #include "intobject.h"
+#include "structobject.h"
+#include "functionobject.h"
+#include "typedef.h"
 #endif
 
 #if HAS_VM == 1 /* bytecode virtual machine */
