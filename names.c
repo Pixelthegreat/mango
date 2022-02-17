@@ -1,19 +1,19 @@
 /*
  *
- * Copyright 2021, Elliot Kohlmyer
- *
+ * Copyright 2021, 2022 Elliot Kohlmyer
+ * 
  * This file is part of Mango.
- *
+ * 
  * Mango is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * Mango is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
  *
@@ -23,6 +23,7 @@
 #include "error.h" /* error handling */
 #include "arrayobject.h" /* array object */
 #include "pointerobject.h" /* pointers */
+#include "structobject.h" /* structs */
 #include <stdlib.h> /* malloc, realloc, free */
 #include <string.h> /* strcmp */
 #include <stdio.h> /* printf */
@@ -30,8 +31,10 @@
 /* forward declarations */
 extern object *objectCopy(object *);
 extern int DEBUG;
+extern FILE *debug_file;
 
 int is_at_end = 0;
+static int id = 0;
 
 /* create a name table */
 extern nameTable *namesNew() {
@@ -52,6 +55,7 @@ extern nameTable *namesNew() {
 	nt->n_of_names = 0;
 	nt->cap_names = 8;
 	nt->parent = NULL;
+	nt->id = id++;
 
 	/* return */
 	return nt;
@@ -91,9 +95,11 @@ extern nameTable *namesCopy(nameTable *nt) {
 		XINCREF(o);
 		if (o->type & OBJECT_POINTER)
 			XINCREF(O_OBJ(O_PTR(o)->val));
+
+		if (DEBUG) fprintf(debug_file, "[names] Copied %p[name=%s,type=%d] to %p[type=%d]\n", nt->values[i], nt->names[i], nt->values[i]->type, o, o->type);
 	}
 
-	if (DEBUG) printf("[names] Copied %p to %p\n", nt, nt2);
+	if (DEBUG) fprintf(debug_file, "[names] Copied %p(%d) to %p(%d)\n", nt, nt->id, nt2, nt2->id);
 
 	/* return table */
 	return nt2;
@@ -216,7 +222,7 @@ extern object *namesGetFromString(nameTable *nt, object *obj) {
 /* free a name table */
 extern void namesFree(nameTable *nt) {
 
-	if (DEBUG) printf("[names] Freeing %p\n", nt);
+	if (DEBUG) fprintf(debug_file, "[names] Freeing %p\n", nt);
 
 	/* decrease references for each object */
 	for (int i = 0; i < nt->n_of_names; i++) {
@@ -224,7 +230,7 @@ extern void namesFree(nameTable *nt) {
 		if (!is_at_end) {
 
 			/* debug info */
-			if (DEBUG) printf("[names] Dereffing '%s'...\n", nt->names[i]);
+			if (DEBUG) fprintf(debug_file, "[names] Dereffing '%s'...\n", nt->names[i]);
 	
 			XDECREF(nt->values[i]);
 	
@@ -234,11 +240,11 @@ extern void namesFree(nameTable *nt) {
 				XDECREF(O_OBJ(O_PTR(nt->values[i])->val));
 			}
 	
-			if (DEBUG) printf("[names] Dereffed '%s'.\n", nt->names[i]);
+			if (DEBUG) fprintf(debug_file, "[names] Dereffed '%s'.\n", nt->names[i]);
 		}
 	}
 
-	if (DEBUG) printf("[names] Dereffed all values for nt %p\n", nt);
+	if (DEBUG) fprintf(debug_file, "[names] Dereffed all values for nt %p\n", nt);
 
 	/* free lists */
 	free(nt->names);
@@ -247,5 +253,5 @@ extern void namesFree(nameTable *nt) {
 	/* free table */
 	free(nt);
 
-	if (DEBUG) printf("[names] Freed nt %p\n", nt);
+	if (DEBUG) fprintf(debug_file, "[names] Freed nt %p\n", nt);
 }

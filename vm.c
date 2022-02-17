@@ -1,19 +1,19 @@
 /*
  *
- * Copyright 2021, Elliot Kohlmyer
- *
+ * Copyright 2021, 2022 Elliot Kohlmyer
+ * 
  * This file is part of Mango.
- *
+ * 
  * Mango is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * Mango is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
  *
@@ -52,6 +52,7 @@ static int gbc_len = 100; /* number of iterations of vmHandle before objectColle
 /* debug trace list for determining where a problem is coming from */
 object *debug_trace[8];
 int dbt_n = 0;
+extern FILE *debug_file;
 
 /* create a new vm struct from existing bytecode structure */
 extern vm *vmNew(bytecode *bc) {
@@ -160,7 +161,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 
 	object *o = NULL;
 
-	if (VM_DEBUG) printf("[vm] type %d\n", (((u8 *)v->bc)[i]));
+	if (VM_DEBUG) fprintf(debug_file, "[vm] node type %02x\n", (((u8 *)v->bc)[i]));
 
 	/* check options */
 
@@ -207,7 +208,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		o->fname = v->ctx->fn;
 
 		/* debug info */
-		if (VM_DEBUG) printf("[vm] created string with value '%s'\n", O_ARRAY(O_PTR(o)->val)->n_start);
+		if (VM_DEBUG) fprintf(debug_file, "[vm] created string with value '%s'\n", O_ARRAY(O_PTR(o)->val)->n_start);
 	}
 
 	/* create an int object */
@@ -221,7 +222,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		o->fname = v->ctx->fn;
 
 		/* debug info */
-		if (VM_DEBUG) printf("[vm] created integer object with value %d\n", O_INT(o)->val);
+		if (VM_DEBUG) fprintf(debug_file, "[vm] created integer object with value %d\n", O_INT(o)->val);
 
 		/* advance number of bytes */
 		v->nofbytes += 5;
@@ -302,7 +303,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* debug info */
 		if (VM_DEBUG) {
 			
-			printf("[vm] interpreted unary operation with op code %d\n", op);
+			fprintf(debug_file, "[vm] interpreted unary operation with op code %d\n", op);
 			if (o->type == OBJECT_INT) printf("[vm] unary operation value is %d\n", O_INT(o)->val);
 		}
 	}
@@ -341,7 +342,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* debug */
 		if (VM_DEBUG) {
 			
-			printf("[vm] interpreted binary operation with operation %d\n", op);
+			fprintf(debug_file, "[vm] interpreted binary operation with operation %d\n", op);
 			if (c->type == OBJECT_INT) printf("[vm] binary operation value is %d\n", O_INT(c)->val);
 		}
 	}
@@ -537,7 +538,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* debug info */
 		if (VM_DEBUG) {
 
-			printf("[vm] set object '%s' with type %d in nameTable %p.\n", cn, val->type, ntc);
+			fprintf(debug_file, "[vm] set object '%s' with type %d in nameTable %p.\n", cn, val->type, ntc);
 		}
 	}
 
@@ -556,13 +557,15 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* first name */
 		char *first = &(((char *)v->bc)[v->lowbi + v->nofbytes]);
 		v->nofbytes += strlen(first) + 1;
+		char *first2 = first;
 
 		/* get object */
 		object *f = namesGet(v->ctx->nt, first);
 
 		/* if it a struct pointer */
-		if ((n > 1) && (f != NULL) && (f->type == OBJECT_STRUCT | OBJECT_POINTER))
+		if ((n > 1) && (f != NULL) && ((f->type & 0x3) == OBJECT_STRUCT) && (f->type & OBJECT_POINTER)) {
 			f = O_OBJ(O_PTR(f)->val);
+		}
 
 		int j = 1;
 
@@ -698,8 +701,8 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* debug info */
 		if (VM_DEBUG) {
 
-			if (_v == 0x9A) printf("[vm] retreived object '%s[%d]' with type %d.\n", first, O_INT(arr_idx)->val, o->type);
-			else printf("[vm] retreived object '%s' with type %d from nameTable %p and context '%s'.\n", first, o->type, ntc, nctx->sn);
+			if (_v == 0x9A) fprintf(debug_file, "[vm] retreived object '%s[%d]' with type %d.\n", first, O_INT(arr_idx)->val, o->type);
+			else fprintf(debug_file, "[vm] retreived object '%s' with type %d from nameTable %p(%d) and context '%s'.\n", first, o->type, ntc, ntc->id, nctx->sn);
 		}
 	}
 
@@ -817,10 +820,10 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* debug info */
 		if (VM_DEBUG) {
 			
-			printf("[vm] created undefined variable with type '%s", tp_name);
-			if (ob_type & OBJECT_POINTER) printf(" *");
-			if (ob_type & OBJECT_ARRAY) printf("[]");
-			printf("' and with name '%s'\n", ob_name);
+			fprintf(debug_file, "[vm] created undefined variable with type '%s", tp_name);
+			if (ob_type & OBJECT_POINTER) fprintf(debug_file, " *");
+			if (ob_type & OBJECT_ARRAY) fprintf(debug_file, "[]");
+			fprintf(debug_file, "' and with name '%s'\n", ob_name);
 		}
 	}
 
@@ -904,10 +907,10 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		/* debug info */
 		if (VM_DEBUG) {
 			
-			printf("[vm] set object '%s' with type %02x", ob_name, o->type);
-			if ((ob_type & 0x3) == OBJECT_INT) printf(" and with value %d", O_INT(o)->val);
+			fprintf(debug_file, "[vm] set object '%s' with type %02x", ob_name, o->type);
+			if ((ob_type & 0x3) == OBJECT_INT) fprintf(debug_file, " and with value %d", O_INT(o)->val);
 			//else if ((o->type == (OBJECT_CHR | OBJECT_ARRAY)) || (o->type == (OBJECT_CHR | OBJECT_POINTER))) printf(" and with value '%s'", O_ARRAY(o)->n_start);
-			printf(".\n");
+			fprintf(debug_file, ".\n");
 		}
 	}
 
@@ -1120,7 +1123,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		free(ob_args); /* free argument list because we don't need it anymore */
 
 		/* debug info */
-		if (VM_DEBUG) printf("[vm] called function '%s'.\n", O_FUNC(fnc)->func_name);
+		if (VM_DEBUG) fprintf(debug_file, "[vm] called function '%s'.\n", O_FUNC(fnc)->func_name);
 	}
 
 	/* function definition */
@@ -1167,7 +1170,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		o = dec;
 
 		/* debug info */
-		if (DEBUG) printf("[vm] set function body for '%s'.\n", O_FUNC(o)->func_name);
+		if (DEBUG) fprintf(debug_file, "[vm] set function body for '%s'.\n", O_FUNC(o)->func_name);
 	}
 
 	/* function declaration */
@@ -1284,7 +1287,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		namesSet(v->ctx->nt, fn_name, o);
 
 		/* debug info */
-		if (DEBUG) printf("[vm] created function reference '%s'.\n", fn_name);
+		if (DEBUG) fprintf(debug_file, "[vm] created function reference '%s'.\n", fn_name);
 	}
 
 	/* extern */
@@ -1628,10 +1631,10 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		o = intobjectNew(0);
 
 		/* debug */
-		if (VM_DEBUG) printf("[vm] created type '%s' based off of '%s'\n", ntp, otp);
+		if (VM_DEBUG) fprintf(debug_file, "[vm] created type '%s' based off of '%s'\n", ntp, otp);
 	}
 
-	if (VM_DEBUG) printf("[vm] vm scope is '%s' in file '%s'\n", v->ctx->sn, v->ctx->fn);
+	if (VM_DEBUG) fprintf(debug_file, "[vm] vm scope is '%s' in file '%s'\n", v->ctx->sn, v->ctx->fn);
 
 	if (o == NULL) {
 	
@@ -1639,11 +1642,11 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		if (VM_DEBUG) {
 
 			/* not built to handle */
-			printf("[vm] not built to handle '%02x' (%08x)\n[vm] trace:\n", ((u8 *)v->bc)[i], i);
+			fprintf(debug_file, "[vm] not built to handle '%02x' (%08x)\n[vm] trace:\n", ((u8 *)v->bc)[i], i);
 		
 			/* trace */
 			for (int i = 0; i < dbt_n; i++)
-				printf("\t- pointer: %p, type: %d\n", debug_trace[i], debug_trace[i]->type);
+				fprintf(debug_file, "\t- pointer: %p, type: %d\n", debug_trace[i], debug_trace[i]->type);
 		}
 	
 		/* no other option */
@@ -1666,7 +1669,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 	vmGetErrorInfo(v, &o->lineno, &o->colno);
 	if (o->fname == NULL) o->fname = v->ctx->fn;
 
-	if (VM_DEBUG) printf("[vm] finished interpreting object.\n");
+	if (VM_DEBUG) fprintf(debug_file, "[vm] finished interpreting object.\n");
 
 	return o; /* object */
 }
@@ -1675,7 +1678,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 extern void vmLoadIdataTable(vm *v) {
 
 	/* more debug info */
-	if (VM_DEBUG) printf("[vm] idata table: %p\n", v->idata);
+	if (VM_DEBUG) fprintf(debug_file, "[vm] idata table: %p\n", v->idata);
 
 	v->nidat = 0;
 
@@ -1697,7 +1700,7 @@ extern void vmLoadIdataTable(vm *v) {
 				/* set entry */
 				char *idt = &(((char *)v->bc)[loc]);
 				v->idata[v->nidat++] = idt;
-				if (VM_DEBUG) printf("[vm] idata: '%s'\n", idt);
+				if (VM_DEBUG) fprintf(debug_file, "[vm] idata: '%s'\n", idt);
 
 				/* advance i */
 				i += 6;
@@ -1708,7 +1711,7 @@ extern void vmLoadIdataTable(vm *v) {
 	}
 
 	/* debug */
-	if (VM_DEBUG) printf("[vm] loaded idata table successfully.\n");
+	if (VM_DEBUG) fprintf(debug_file, "[vm] loaded idata table successfully.\n");
 }
 
 int _vmloadeddata = 0;
@@ -1745,7 +1748,7 @@ extern void vmLoadBuiltins() {
 	namesSet(vmdctx->nt, "read", bfRead);
 
 	/* debug info */
-	if (VM_DEBUG) printf("[vm] initialised builtin functions.\n");
+	if (VM_DEBUG) fprintf(debug_file, "[vm] initialised builtin functions.\n");
 }
 
 /* execute bytecode */
@@ -1768,7 +1771,7 @@ extern void vmExec(vm *v) {
 	/* debug info */
 	if (VM_DEBUG) {
 
-		printf("[vm] initialised variables true (0), false (0), and null (0).\n");
+		fprintf(debug_file, "[vm] initialised variables true (0), false (0), and null (0).\n");
 	}
 
 	object *co = NULL; /* current object */
@@ -1776,7 +1779,7 @@ extern void vmExec(vm *v) {
 	/* get flags */
 	v->bcflags = ((u8 *)v->bc)[7];
 
-	if (VM_DEBUG) printf("[vm] flags for '%p': %02x\n", v, v->bcflags);
+	if (VM_DEBUG) fprintf(debug_file, "[vm] flags for '%p': %02x\n", v, v->bcflags);
 
 	/* idata mode */
 	if (IS_IDAT(v->bcflags)) {
@@ -1799,7 +1802,7 @@ extern void vmExec(vm *v) {
 			v->ctx->fn = &((char *)v->bc)[i + 2];
 
 			/* debug info */
-			if (VM_DEBUG) printf("[vm] changed filename of scope '%s' to '%s'\n", v->ctx->sn, v->ctx->fn);
+			if (VM_DEBUG) fprintf(debug_file, "[vm] changed filename of scope '%s' to '%s'\n", v->ctx->sn, v->ctx->fn);
 
 			i += strlen(v->ctx->fn) + 3;
 		}
@@ -1867,11 +1870,14 @@ extern void vmExec(vm *v) {
 			i += v->nofbytes; /* advance number of bytes */
 
 			/* error */
-			if (co == NULL || errorIsSet())
+			if (co == NULL || errorIsSet()) {
+
+				if (VM_DEBUG) fprintf(debug_file, "[vm] error here\n");
 				return;
+			}
 
 			/* debug */
-			if (VM_DEBUG) printf("[vm] ----\n");
+			if (VM_DEBUG) fprintf(debug_file, "[vm] ----\n");
 		}
 
 		objectCollect();
@@ -1894,7 +1900,7 @@ extern void vmGetErrorInfo(vm *v, unsigned int *lineno, unsigned int *colno) {
 		*colno = c;
 
 		/* debug info */
-		if (VM_DEBUG) printf("[vm] line and column numbers: %d, %d\n", l, c);
+		if (VM_DEBUG) fprintf(debug_file, "[vm] line and column numbers: %d, %d\n", l, c);
 
 		/* advance v->nofbytes */
 		v->nofbytes += 9;
@@ -1918,7 +1924,7 @@ extern void vmFreeAll() {
 			if (vm_list[i] != NULL) vmFree(vm_list[i]);
 
 			/* debug info */
-			if (VM_DEBUG) printf("[vm] Freed vm at %p.\n", vm_list[i]);
+			if (VM_DEBUG) fprintf(debug_file, "[vm] Freed vm at %p.\n", vm_list[i]);
 		}
 
 		/* free the context */

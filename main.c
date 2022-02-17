@@ -1,19 +1,19 @@
 /*
  *
- * Copyright 2021, Elliot Kohlmyer
- *
+ * Copyright 2021, 2022 Elliot Kohlmyer
+ * 
  * This file is part of Mango.
- *
+ * 
  * Mango is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * Mango is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
  *
@@ -30,6 +30,7 @@
 
 char *prog_name; /* program name */
 extern int is_at_end;
+extern FILE *debug_file;
 
 /* function to enable some stuff */
 void endHandle() {
@@ -38,11 +39,20 @@ void endHandle() {
 }
 
 /* main function */
-int main(int argc, char **argv) {
+#ifndef MINGW_ON_LINUX
+int main(int argc, char **argv)
+#else
+int WinMain(int argc, char **argv)
+#endif
+{
 
 	prog_name = argv[0]; /* get program name */
 
+	/* set debug file to be stdout by default */
+	debug_file = stdout;
+
 	/* set functions to execute at program exit (objectFreeAll, vmFreeAll, argparse_free) */
+	atexit(argparse_close_debug_file);
 	atexit(objectFreeAll);
 	atexit(vmFreeAll);
 	atexit(argparse_free);

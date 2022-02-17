@@ -1,19 +1,19 @@
 /*
  *
- * Copyright 2021, Elliot Kohlmyer
- *
+ * Copyright 2021, 2022 Elliot Kohlmyer
+ * 
  * This file is part of Mango.
- *
+ * 
  * Mango is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * Mango is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
  *
@@ -37,5 +37,6 @@ extern int argparse_two(char *, char *); /* parse two arguments */
 extern char **argparse_filenames(); /* receive pointer to filename list */
 extern int argparse_fileslen(); /* get number of names in filename list */
 extern void argparse_free(); /* free file name list */
+extern void argparse_close_debug_file(); /* close debug file */
 
 #endif /* _ARGPARSE_H */

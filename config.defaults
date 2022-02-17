@@ -1,0 +1,2 @@
+CC=cc
+CHECK_HEADERS="stdio.h stdlib.h string.h unistd.h dlfcn.h"

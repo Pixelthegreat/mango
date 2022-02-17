@@ -1,19 +1,19 @@
 /*
  *
- * Copyright 2021, Elliot Kohlmyer
- *
+ * Copyright 2021, 2022 Elliot Kohlmyer
+ * 
  * This file is part of Mango.
- *
+ * 
  * Mango is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * Mango is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
  *
@@ -32,8 +32,9 @@ char **filename_list = NULL; /* list of file names */
 int filename_len = 0; /* length of filename list */
 
 /* help information */
-static char *hlp_inf = "usage: %s [filename] [options]\n\noptions:\n\t-cl       compile library\n\t-cm       compile bytecode executable\n\t-i        idata mode\n\t-h        display help\n\t--help    same as '-h'\n\t-l [lib]  specify a library to run with\n\t-d        print debug info\n\n";
+static char *hlp_inf = "usage: %s [filename] [options]\n\noptions:\n\t-cl       compile library\n\t-cm       compile bytecode executable\n\t-i        idata mode\n\t-h        display help\n\t--help    same as '-h'\n\t-l [lib]  specify a library to run with\n\t-d        print debug info\n\t-df [f]   specify an output file for the debug log\n\n";
 extern char *prog_name;
+extern FILE *debug_file;
 
 /* set flag */
 extern int argparse_set_flag(unsigned int flag) {
@@ -135,7 +136,7 @@ extern int argparse(int argc, char **argv) {
 		}
 
 		/* two arguments */
-		else if (!strcmp(argv[argidx], "-l")) {
+		else if (!strcmp(argv[argidx], "-l") || !strcmp(argv[argidx], "-df")) {
 
 			/* not enough arguments */
 			if ((argidx + 1) >= argc) {
@@ -257,6 +258,20 @@ extern int argparse_two(char *a, char *b) {
 		filename_list[filename_len++] = b;
 	}
 
+	/* debug log file */
+	else if (!strcmp(a, "-df")) {
+
+		/* open file */
+		debug_file = fopen(b, "w");
+
+		if (debug_file == NULL) {
+
+			/* error */
+			fprintf(stderr, "Could not open file '%s' for logging!\n", b);
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
@@ -278,4 +293,10 @@ extern void argparse_free() {
 
 	/* free list if it is active */
 	if (filename_list == NULL) free(filename_list);
+}
+
+/* close file */
+extern void argparse_close_debug_file() {
+
+	if (debug_file != stdout && debug_file != NULL) fclose(debug_file);
 }

@@ -1,19 +1,19 @@
 /*
  *
- * Copyright 2021, Elliot Kohlmyer
- *
+ * Copyright 2021, 2022 Elliot Kohlmyer
+ * 
  * This file is part of Mango.
- *
+ * 
  * Mango is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * Mango is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with Mango.  If not, see <https://www.gnu.org/licenses/>.
  *
@@ -43,6 +43,7 @@ int DEBUG = 0; /* debugging */
 int INT_SIGNAL = 0; /* if we were interrupted */
 int objdout = 0; /* for disabling non-debug output */
 int SEGV_SIGNAL = 0; /* for checking if objectSegvHandler was already called */
+FILE *debug_file = NULL; /* file that debug info gets sent to */
 
 /* for builtinRead and builtinWrite */
 static int open_fds[8] = {0,1,2};
@@ -52,6 +53,9 @@ static int open_fdsl = 3;
 static typeobject **types = NULL;
 static int types_len = 0;
 static int types_cap = 8;
+
+/* misc */
+static int struct_ids = 0;
 
 /* interrupt handler for SIGINT */
 extern void objectIntHandler(int n) {
@@ -66,7 +70,7 @@ extern void objectSegvHandler(int n) {
 	if (SEGV_SIGNAL) {
 		
 		fprintf(stderr, "second segv caught! exiting...\n");
-		quick_exit(0);
+		abort();
 		return;
 	}
 
@@ -93,13 +97,15 @@ extern object *objectNew(unsigned char type, unsigned int size) {
 
 	/* set our values */
 	o->type = type;
-	o->refcnt = 0; /* can be freed if it needs to */
+	o->refcnt = 0; /* can be freed if it needs to (starts out at 1 so that garbage collection won't immediately take care of it) */
 	
 	o->lineno = 0;
 	o->colno = 0;
 	o->fname = NULL;
 
 	o->sz = size;
+
+	o->copied = 0;
 
 	/* auto initalise list */
 	if (objects == NULL) {
@@ -108,7 +114,7 @@ extern object *objectNew(unsigned char type, unsigned int size) {
 		cap_objects = 8;
 		memset(objects, 0, sizeof(object *) * 8);
 
-		if (DEBUG) printf("[DEBUG] Initalised object list.\n");
+		if (DEBUG) fprintf(debug_file, "[DEBUG] Initalised object list.\n");
 	}
 
 	unsigned int lnums;
@@ -126,7 +132,7 @@ extern object *objectNew(unsigned char type, unsigned int size) {
 		objects = (object **)realloc(objects, sizeof(object*) * cap_objects * 2);
 		cap_objects *= 2;
 
-		if (DEBUG) printf("[DEBUG] Resized object list to %d item(s) capacity.\n", cap_objects);
+		if (DEBUG) fprintf(debug_file, "[DEBUG] Resized object list to %d item(s) capacity.\n", cap_objects);
 	}
 
 	/* increase n_of_objects if necessary */
@@ -136,7 +142,7 @@ extern object *objectNew(unsigned char type, unsigned int size) {
 	objects[lnums] = o;
 
 	/* debug mode */
-	if (DEBUG) printf("[DEBUG] Successfully created an object (%p) of type %d.\n", o, type);
+	if (DEBUG) fprintf(debug_file, "[DEBUG] Successfully created an object (%p) of type %d.\n", o, type);
 
 	return o; /* last piece of the puzzle */
 }
@@ -147,7 +153,8 @@ extern object *objectCopy(object *o) {
 	object *o2 = objectNew(o->type, o->sz);
 	memcpy(o2, o, o->sz);
 	
-	o->refcnt = 0;
+	o2->refcnt = 0;
+	o2->copied = 1;
 
 	/* return object */
 	return o2;
@@ -249,7 +256,7 @@ extern object *typeobjectGet(char *tp_name) {
 /* perform operation on object */
 extern object *objectOperation(object *obj, object *other, unsigned int op_num) {
 
-	if (DEBUG) printf("[DEBUG] operation: (type:%d op:%d type:%d)\n", obj->type, op_num, other->type);
+	if (DEBUG) fprintf(debug_file, "[DEBUG] operation: (type:%d op:%d type:%d)\n", obj->type, op_num, other->type);
 
 	/* '+' */
 	if (op_num == TOKEN_PLUS) {
@@ -520,6 +527,7 @@ extern object *structobjectNew(context *ctx, char *struct_name) {
 	O_STRUCT(o)->nt = ctx->nt;
 	O_STRUCT(o)->parent = O_STRUCT(o);
 	O_STRUCT(o)->is_templ = 1;
+	O_STRUCT(o)->id = struct_ids++;
 
 	/* return object */
 	return o;
@@ -538,9 +546,14 @@ extern object *structobjectInstance(object *s) {
 	/* set values */
 	O_STRUCT(s2)->struct_name = O_STRUCT(s)->struct_name;
 	O_STRUCT(s2)->nt = namesCopy(O_STRUCT(s)->ctx->nt);
-	O_STRUCT(s2)->ctx = O_STRUCT(s)->ctx;
 	O_STRUCT(s2)->parent = O_STRUCT(s);
 	O_STRUCT(s2)->is_templ = 0;
+
+	/* allocate context */
+	O_STRUCT(s2)->ctx = (context *)malloc(sizeof(context));
+	O_STRUCT(s2)->ctx->fn = O_STRUCT(s)->ctx->fn;
+	O_STRUCT(s2)->ctx->sn = O_STRUCT(s)->ctx->sn;
+	O_STRUCT(s2)->ctx->nt = O_STRUCT(s2)->nt;
 
 	/* return struct */
 	return s2;
@@ -556,7 +569,7 @@ extern void objectFree(object *obj) {
 		free(O_FUNC(obj)->fa_names);
 		free(O_FUNC(obj)->fa_types);
 
-		if (DEBUG) printf("[DEBUG] Freed fa_names %p, fa_types %p.\n", O_FUNC(obj)->fa_names, O_FUNC(obj)->fa_types);
+		if (DEBUG) fprintf(debug_file, "[DEBUG] Freed fa_names %p, fa_types %p.\n", O_FUNC(obj)->fa_names, O_FUNC(obj)->fa_types);
 	}
 
 	/* struct */
@@ -565,16 +578,16 @@ extern void objectFree(object *obj) {
 		/* free context */
 		contextFree(O_STRUCT(obj)->ctx);
 
-		if (DEBUG) printf("[DEBUG] Freed ctx %p.\n", O_STRUCT(obj)->ctx);
+		if (DEBUG) fprintf(debug_file, "[DEBUG] Freed ctx %p.\n", O_STRUCT(obj)->ctx);
 	}
 
 	/* non-template struct */
 	if (obj->type == OBJECT_STRUCT && !(O_STRUCT(obj)->is_templ)) {
 
 		/* free name table */
-		namesFree(O_STRUCT(obj)->nt);
+		contextFree(O_STRUCT(obj)->ctx);
 
-		if (DEBUG) printf("[DEBUG] Freed nt %p.\n", O_STRUCT(obj)->nt);
+		if (DEBUG) fprintf(debug_file, "[DEBUG] Freed nt %p.\n", O_STRUCT(obj)->nt);
 	}
 
 	/* free the object */
@@ -589,12 +602,12 @@ extern void objectCollect() {
 		if ((objects[i] != NULL) && (objects[i]->refcnt < 1)) {
 
 			/* debug info */
-			if (DEBUG) printf("[DEBUG] Freeing %p with type %d...\n", objects[i], objects[i]->type);
+			if (DEBUG) fprintf(debug_file, "[DEBUG] Freeing %p with type %d...\n", objects[i], objects[i]->type);
 
 			objectFree(objects[i]);
 
 			/* debug */
-			if (DEBUG) printf("[DEBUG] Garbage freed %p.\n", objects[i]);
+			if (DEBUG) fprintf(debug_file, "[DEBUG] Garbage freed %p.\n", objects[i]);
 			objects[i] = NULL;
 		}
 	}
@@ -602,19 +615,19 @@ extern void objectCollect() {
 
 extern void objectFreeAll() {
 
-	if (DEBUG) printf("[DEBUG] Preparing to free objects...\n");
+	if (DEBUG) fprintf(debug_file, "[DEBUG] Preparing to free objects...\n");
 
 	/* go through list and free all objects. */
 	for (int i = 0; i < n_of_objects; i++) {
 		if (objects[i] != NULL) {
 
 			/* debug info */
-			if (DEBUG) printf("[DEBUG] Freeing %p with type %d...\n", objects[i], objects[i]->type);
+			if (DEBUG) fprintf(debug_file, "[DEBUG] Freeing %p with type %d...\n", objects[i], objects[i]->type);
 
 			objectFree(objects[i]);
 
 			/* debug mode stuff */
-			if (DEBUG) printf("[DEBUG] Freed %p.\n", objects[i]);
+			if (DEBUG) fprintf(debug_file, "[DEBUG] Freed %p.\n", objects[i]);
 		}
 	}
 
@@ -627,6 +640,10 @@ extern void objectFreeAll() {
 
 /* builtin function : write */
 extern object *builtinWrite(object **ob_args, void *ctx) {
+
+	/* leave if there is no buffer */
+	if (O_PTR(ob_args[1])->val == NULL)
+		return intobjectNew(0);
 
 	/* get context */
 	context *fctx = (context *)ctx;

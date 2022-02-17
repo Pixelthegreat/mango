@@ -4,7 +4,16 @@ A programming language also written in C.
 # updates
 this updates section of the README.md file will only show the latest free updates. For more information, please read the README.md file from older commits or go to the releases/tags section of the repository.
 
-December 11, 2021 - 0.1.1
+## February 17, 2022 - 0.1.2
+This update is a simple bugfix.
+
+Modified:
+	- replaced the regular Makefile system with [my-configure](https://github.com/Pixelthegreat/my-configure). See `./configure.sh -help` for more details, or take a look at the repository for `my-configure`.
+
+Fixed:
+	- A bug in which a struct instance would always refer to the same nametable as it's parent (I don't have any clue how this happened, but I fixed it :D)
+
+## December 11, 2021 - 0.1.1
 The last update of 2021, in preparation for the Christmas break. This update finalizes the feature set by adding structs (although they aren't in a fully working state), as well as the functionality for '&' and '\*' which are for *address of* and *value of* pointer operations, respectively.
 
 Happy Xmas
@@ -16,7 +25,7 @@ Modified:
 	- The names system, I only realized a few days ago just how broken it is
 
 
-Nov 22, 2021 - 0.0.1
+## Nov 22, 2021 - 0.0.1
 The first real update! This update adds the majority of features missing from Mango. The only exceptions are Typedef-ing and Structs. As for the "unsigned" and "const" keywords, i have designed that those would be too unethical and they don't make much sense compared to how much they did in the planning phase for Mango.
 
 Keep in mind that I haven't done much bug testing. As such, from here on, I plan to do extensive bug checks to flush any errors down the drain.
@@ -31,14 +40,6 @@ Added:
 
 Modified:
 - Changed a bunch more stuff until I was happy with it (particularly the bytecode compiler)
-
-Oct 30, 2021
-Added:
-- Bytecode Interpreter Virtual Machine Thing (BIVMT)
-- Context System for individual files, libraries, and scopes to contain their own variables.
-
-Modified:
-- Completely rewrote the object system from scratch. Now I am happy with it.
 
 # standard library
 
