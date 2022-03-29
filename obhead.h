@@ -23,6 +23,8 @@
 #ifndef _OBHEAD_H
 #define _OBHEAD_H
 
+#include <stdlib.h>
+
 /* object types */
 #define OBJECT_INT 0
 #define OBJECT_CHR 1
@@ -32,6 +34,11 @@
 #define OBJECT_ARRAY (1 << 2)
 #define OBJECT_POINTER (1 << 3)
 #define OBJECT_TYPE (1 << 4)
+#define OBJECT_DL (1 << 5)
+
+/* these will make builtin function creation much less ugly */
+#define FUNC_ARGNAME_LIST(n) ((char **)malloc(sizeof(char *) * n))
+#define FUNC_ARGTYPE_LIST(n) ((unsigned char *)malloc(sizeof(unsigned char) * n))
 
 /* object head */
 #define OB_HEAD 	unsigned int refcnt; /* number of references */ \
@@ -47,10 +54,24 @@ typedef struct {
 	OB_HEAD
 } object;
 
+/* intobject for ints */
+typedef struct {
+	OB_HEAD
+	int val; /* value for integer */
+} intobject;
+
+/* charobject for chars */
+typedef struct {
+	OB_HEAD
+	char val; /* value for char */
+} charobject;
+
 /* get a pointer type */
 #define POINTER(t) (t | OBJECT_POINTER)
 
 #define O_OBJ(o) ((object *)(o))
+#define O_CHR(o) ((charobject *)(o))
+#define O_INT(o) ((intobject *)(o))
 
 /* get the size of a type */
 #define O_TPSZ(o) (((o) & OBJECT_POINTER)? sizeof(void *): (((o) & 3) == OBJECT_INT? sizeof(int): (((o) & 3) == OBJECT_CHR? sizeof(char): 0)))

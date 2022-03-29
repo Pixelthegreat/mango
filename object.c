@@ -29,6 +29,7 @@
 #include "token.h" /* yes */
 #include "context.h"
 #include "typedef.h"
+#include "mangodl.h"
 
 #include <stdlib.h> /* malloc/realloc/free, etc */
 #include <string.h> /* strcpy, strlen, etc */
@@ -166,9 +167,14 @@ extern object *typeNew(char *tp_name, unsigned char tp_type) {
 	/* create object */
 	object *tp = objectNew(tp_type | OBJECT_TYPE, sizeof(typeobject));
 
-	/* TODO: implement rest of function */
+	/* create new name */
+	char *tn = (char *)malloc(strlen(tp_name) + 1);
+	strcpy(tn, tp_name);
+	tp_name = tn;
+
 	O_TYPE(tp)->tp_name = tp_name;
 	O_TYPE(tp)->tp_type = tp_type;
+	XINCREF(tp);
 
 	/* return type */
 	return tp;
@@ -511,6 +517,20 @@ extern object *functionobjectNew(char *func_name, unsigned char rt_type, char **
 	return o;
 }
 
+/* create a builtin function */
+extern object *functionobjectBuiltinNew(char *func_name, unsigned char rt_type, char **fa_names, unsigned char *fa_types, int n_of_args, bfunc_handle_t f) {
+
+	/* create object */
+	object *o = functionobjectNew(func_name, rt_type, fa_names, fa_types, n_of_args);
+
+	/* set values */
+	O_FUNC(o)->is_builtin = 1;
+	O_FUNC(o)->fb_start = (unsigned char *)f;
+
+	/* return function */
+	return o;
+}
+
 /* create a new struct */
 extern object *structobjectNew(context *ctx, char *struct_name) {
 
@@ -588,6 +608,25 @@ extern void objectFree(object *obj) {
 		contextFree(O_STRUCT(obj)->ctx);
 
 		if (DEBUG) fprintf(debug_file, "[DEBUG] Freed nt %p.\n", O_STRUCT(obj)->nt);
+	}
+
+	/* dynamic library */
+	if (obj->type & OBJECT_DL) {
+
+		if (O_DL(obj)->nt != NULL) {
+			
+			/* free name table */
+			namesFree(O_DL(obj)->nt);
+	
+			if (DEBUG) fprintf(debug_file, "[DEBUG] Freed nt %p.\n", O_DL(obj)->nt);
+		}
+	}
+
+	/* type */
+	if (obj->type & OBJECT_TYPE) {
+
+		/* free copied type name */
+		free(O_TYPE(obj)->tp_name);
 	}
 
 	/* free the object */
@@ -718,4 +757,61 @@ extern object *builtinRead(object **ob_args, void *ctx) {
 
 	/* return from function */
 	return intobjectNew(n_of_chars);
+}
+
+/* dlopen */
+extern object *builtinDlopen(object **ob_args, void *ctx) {
+
+	/* get context */
+	context *fctx = (context *)ctx;
+
+	/* get value */
+	char *n = O_ARRAY(O_PTR(ob_args[0])->val)->n_start;
+
+	/* (try to) open lib */
+	int idx = mangodlOpen(ob_args[0], n);
+
+	/* return value */
+	return intobjectNew(idx);
+}
+
+/* dlclose */
+extern object *builtinDlclose(object **ob_args, void *ctx) {
+
+	/* get context */
+	context *fctx = (context *)ctx;
+
+	/* get value */
+	object *n = ob_args[0];
+
+	/* get dl object */
+	mangodlobject *d = mangodlGet(n);
+
+	/* error */
+	if (d == NULL || errorIsSet())
+		return intobjectNew(-1);
+
+	/* close dl object */
+	return intobjectNew(mangodlClose(d));
+}
+
+/* dlsym */
+extern object *builtinDlsym(object **ob_args, void *ctx) {
+
+	/* get context */
+	context *fctx = (context *)ctx;
+
+	/* get values */
+	object *n = ob_args[0]; /* index number */
+	object *s = ob_args[1]; /* name of symbol */
+
+	/* get dl object */
+	mangodlobject *d = mangodlGet(n);
+
+	/* error */
+	if (d == NULL || errorIsSet())
+		return NULL;
+
+	/* get symbol */
+	return mangodlSym(d, s);
 }

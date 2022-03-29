@@ -2,7 +2,18 @@
 A programming language also written in C.
 
 # updates
-this updates section of the README.md file will only show the latest free updates. For more information, please read the README.md file from older commits or go to the releases/tags section of the repository.
+this updates section of the README.md file will only show the latest three updates. For more information, please read the README.md file from older commits or go to the releases/tags section of the repository.
+
+## March 29, 2022 - 0.2.0
+This update is a feature and bugfix update. Bugs are now listed in BUGFIX.md, so for more information on a bug, please read that. Bugfix numbers are formatted like this, `mb<bug_number>`, and will be referred to in the list of fixed bugs if there are any.
+
+This update adds an API for using libc's builtin `libdl` functions. Although I do not have any examples prepared, I do wish to provide some soon. I also wish to provide general language documentation soon, as well.
+
+Added:
+	- The `libdl` API for Mango
+
+Fixed:
+	- mb101: Fixed a bug in which type objects would be garbage collected without warning
 
 ## February 17, 2022 - 0.1.2
 This update is a simple bugfix.
@@ -23,23 +34,6 @@ Added:
 	- '&' and '\*'
 Modified:
 	- The names system, I only realized a few days ago just how broken it is
-
-
-## Nov 22, 2021 - 0.0.1
-The first real update! This update adds the majority of features missing from Mango. The only exceptions are Typedef-ing and Structs. As for the "unsigned" and "const" keywords, i have designed that those would be too unethical and they don't make much sense compared to how much they did in the planning phase for Mango.
-
-Keep in mind that I haven't done much bug testing. As such, from here on, I plan to do extensive bug checks to flush any errors down the drain.
-
-Finally, I should mention that I am designating this update as an alpha release. This means that until the beta stage of 0.x releases, I will try and plan any features that I haven't thought of before that I might want to add. The beta stage will purely focus on bug testing.
-
-Added:
-- More stuff for the BIVMT
-- The GNU GPLv2 License
-- Builtin functions (functions that can be called from Mango, but actually call C code in turn)
-- More problems then I can count
-
-Modified:
-- Changed a bunch more stuff until I was happy with it (particularly the bytecode compiler)
 
 # standard library
 

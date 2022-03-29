@@ -8,8 +8,8 @@ DESTDIR=_configure_DESTDIR
 
 all: mango
 
-mango: main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o
-	$(CC) $(CCFLAGS) $(LDFLAGS) main.o object.o error.o names.o token.o node.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o -o mango
+mango: main.o object.o error.o names.o token.o node.o file.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o mangodl.o
+	$(CC) $(CCFLAGS) main.o object.o error.o names.o token.o node.o lexer.o parser.o bytecode.o stringext.o argparse.o run.o context.o vm.o mangodl.o -o mango $(LDFLAGS)
 
 main.o: main.c mango.h
 	$(CC) -c main.c $(CCFLAGS)
@@ -52,6 +52,9 @@ context.o: context.c context.h
 
 vm.o: vm.c vm.h
 	$(CC) -c vm.c $(CCFLAGS)
+
+mangodl.o: mangodl.c mangodl.h
+	$(CC) -c mangodl.c $(CCFLAGS)
 
 clean:
 	rm *.o mango

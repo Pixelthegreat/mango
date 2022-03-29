@@ -36,6 +36,7 @@
 #define HAS_EXTENSION			1 /* stdlib extensions */
 #define HAS_ARGPARSE			1 /* argument parser */
 #define HAS_RUN					1 /* run a file */
+#define HAS_DL					1 /* dynamic loader */
 
 /* includes */
 #if HAS_PARSER == 1 /* parser and lexer */
@@ -62,6 +63,7 @@
 #include "structobject.h"
 #include "functionobject.h"
 #include "typedef.h"
+#include "pointerobject.h"
 #endif
 
 #if HAS_VM == 1 /* bytecode virtual machine */
@@ -94,6 +96,10 @@
 #include "run.h"
 #endif
 
+#if HAS_DL == 1 /* dynamic loader */
+#include "mangodl.h"
+#endif
+
 /* good idea to undefine constants */
 #undef HAS_PARSER
 #undef HAS_TOKEN
@@ -107,5 +113,6 @@
 #undef HAS_EXTENSION
 #undef HAS_ARGPARSE
 #undef HAS_RUN
+#undef HAS_DL
 
 #endif /* _MANGO_H */

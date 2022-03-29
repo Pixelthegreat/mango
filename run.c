@@ -218,6 +218,7 @@ extern int run(char *fname, int bc_mode) {
 	/* create buffer and read text */
 	text = (char *)malloc(flen + 1);
 	fread(text, 1, flen, f);
+	text[flen] = 0; /* line added in 0.2.0 */
 	
 	/* close file */
 	fclose(f);

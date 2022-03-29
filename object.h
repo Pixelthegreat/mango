@@ -66,7 +66,10 @@ extern void objectFreeAll(); /* free all objects */
 extern object *objectCopy(object *o); /* copy an object */
 
 /* builtin functions */
-extern object *builtinWrite(object **ob_args, void *ctx);
-extern object *builtinRead(object **ob_args, void *ctx);
+extern object *builtinWrite(object **ob_args, void *ctx); /* write to a file descriptor */
+extern object *builtinRead(object **ob_args, void *ctx); /* read from a file descriptor */
+extern object *builtinDlopen(object **ob_args, void *ctx); /* open a dynamic library using mangodl */
+extern object *builtinDlclose(object **ob_args, void *ctx); /* close a dynamic library using mangodl */
+extern object *builtinDlsym(object **ob_args, void *ctx); /* search for a symbol in a dynamic library using mangodl */
 
 #endif /* _OBJECT_H */

@@ -19,15 +19,19 @@
  *
  */
 
-/* integer objects */
-#ifndef _INTOBJECT_H
-#define _INTOBJECT_H
+#ifndef _NAMETABLE_H
+#define _NAMETABLE_H
 
 #include "obhead.h"
 
-/* functions */
-extern object *intobjectNew(int val);
-extern object *charobjectNew(char val);
-extern object *intcharobjectNew(int isch, int val);
+/* name table for storing names */
+typedef struct _nameTable {
+	struct _nameTable *parent; /* for accessing "outside" values */
+	char **names; /* list of names */
+	object **values; /* list of values */
+	unsigned int n_of_names; /* number of names */
+	unsigned int cap_names; /* capacity of lists */
+	int id; /* identity number for better tracking of what is what */
+} nameTable;
 
-#endif /* _INTOBJECT_H */
+#endif /* _NAMETABLE_H */

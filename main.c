@@ -32,19 +32,21 @@ char *prog_name; /* program name */
 extern int is_at_end;
 extern FILE *debug_file;
 
-/* function to enable some stuff */
-void endHandle() {
+/* function to run at end of program */
+static void endHandle() {
 
 	is_at_end = 1;
+
+	/* call other end functions */
+	argparse_free();
+	vmFreeAll();
+	mangodlCloseAll();
+	objectFreeAll();
+	argparse_close_debug_file();
 }
 
 /* main function */
-#ifndef MINGW_ON_LINUX
-int main(int argc, char **argv)
-#else
-int WinMain(int argc, char **argv)
-#endif
-{
+int main(int argc, char **argv) {
 
 	prog_name = argv[0]; /* get program name */
 
@@ -52,10 +54,6 @@ int WinMain(int argc, char **argv)
 	debug_file = stdout;
 
 	/* set functions to execute at program exit (objectFreeAll, vmFreeAll, argparse_free) */
-	atexit(argparse_close_debug_file);
-	atexit(objectFreeAll);
-	atexit(vmFreeAll);
-	atexit(argparse_free);
 	atexit(endHandle);
 
 	/* set signal handlers */
@@ -108,6 +106,32 @@ int WinMain(int argc, char **argv)
 
 	/* always include this */
 	DEBUG = 1;
+
+	/* open new dl object */
+	int n = mangodlOpen(intobjectNew(0), "./name.so");
+	if (n == -1 || errorIsSet()) {
+
+		errorPrint();
+		return 0;
+	}
+
+	mangodlobject *d = mangodlGet(intobjectNew(0));
+
+	/* try to get 'iob' */
+	object *s = arrayobjectNew(20, OBJECT_CHR);
+	strcpy(O_ARRAY(s)->n_start, "iob");
+
+	object *o = mangodlSym(d, pointerobjectNew(OBJECT_CHR, s));
+
+	/* error */
+	if (o == NULL || errorIsSet()) {
+
+		errorPrint();
+		return 0;
+	}
+
+	/* print value */
+	printf("%d\n", O_INT(o)->val);
 
 	#endif
 

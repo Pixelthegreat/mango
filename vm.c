@@ -1720,32 +1720,64 @@ int _vmloadeddata = 0;
 extern void vmLoadBuiltins() {
 
 	/* write */
-	char **write_arg_names = (char **)malloc(sizeof(char *) * 3);
+	char **write_arg_names = FUNC_ARGNAME_LIST(3);
 	write_arg_names[0] = "fd";
 	write_arg_names[1] = "buf";
 	write_arg_names[2] = "n";
-	u8 *write_arg_types = (u8 *)malloc(sizeof(u8) * 3);
+	
+	u8 *write_arg_types = FUNC_ARGTYPE_LIST(3);
 	write_arg_types[0] = OBJECT_INT;
 	write_arg_types[1] = OBJECT_CHR | OBJECT_POINTER;
 	write_arg_types[2] = OBJECT_INT;
-	object *bfWrite = functionobjectNew("write", OBJECT_INT, write_arg_names, write_arg_types, 3);
-	O_FUNC(bfWrite)->is_builtin = 1;
-	O_FUNC(bfWrite)->fb_start = (unsigned char *)builtinWrite;
+
+	object *bfWrite = functionobjectBuiltinNew("write", OBJECT_INT, write_arg_names, write_arg_types, 3, builtinWrite);
 	namesSet(vmdctx->nt, "write", bfWrite);
 
 	/* read */
-	char **read_arg_names = (char **)malloc(sizeof(char *) * 3);
+	char **read_arg_names = FUNC_ARGNAME_LIST(3);
 	read_arg_names[0] = "fd";
 	read_arg_names[1] = "buf";
 	read_arg_names[2] = "n";
-	u8 *read_arg_types = (u8 *)malloc(sizeof(u8) * 3);
+
+	u8 *read_arg_types = FUNC_ARGTYPE_LIST(3);
 	read_arg_types[0] = OBJECT_INT;
 	read_arg_types[1] = OBJECT_CHR | OBJECT_POINTER;
 	read_arg_types[2] = OBJECT_INT;
-	object *bfRead = functionobjectNew("read", OBJECT_INT, read_arg_names, read_arg_types, 3);
-	O_FUNC(bfRead)->is_builtin = 1;
-	O_FUNC(bfRead)->fb_start = (unsigned char *)builtinRead;
+
+	object *bfRead = functionobjectBuiltinNew("read", OBJECT_INT, read_arg_names, read_arg_types, 3, builtinRead);
 	namesSet(vmdctx->nt, "read", bfRead);
+
+	/* dlopen */
+	char **dlopen_arg_names = FUNC_ARGNAME_LIST(1);
+	dlopen_arg_names[0] = "n";
+
+	u8 *dlopen_arg_types = FUNC_ARGTYPE_LIST(1);
+	dlopen_arg_types[0] = OBJECT_CHR | OBJECT_POINTER;
+
+	object *bfDlopen = functionobjectBuiltinNew("dlopen", OBJECT_INT, dlopen_arg_names, dlopen_arg_types, 1, builtinDlopen);
+	namesSet(vmdctx->nt, "dlopen", bfDlopen);
+
+	/* dlclose */
+	char **dlclose_arg_names = FUNC_ARGNAME_LIST(1);
+	dlclose_arg_names[0] = "n";
+
+	u8 *dlclose_arg_types = FUNC_ARGTYPE_LIST(1);
+	dlclose_arg_types[0] = OBJECT_INT;
+
+	object *bfDlclose = functionobjectBuiltinNew("dlclose", OBJECT_INT, dlclose_arg_names, dlclose_arg_types, 1, builtinDlclose);
+	namesSet(vmdctx->nt, "dlclose", bfDlclose);
+
+	/* dlsym */
+	char **dlsym_arg_names = FUNC_ARGNAME_LIST(2);
+	dlsym_arg_names[0] = "n";
+	dlsym_arg_names[1] = "s";
+
+	u8 *dlsym_arg_types = FUNC_ARGTYPE_LIST(2);
+	dlsym_arg_types[0] = OBJECT_INT;
+	dlsym_arg_types[1] = OBJECT_CHR | OBJECT_POINTER;
+
+	object *bfDlsym = functionobjectBuiltinNew("dlsym", OBJECT_INT, dlsym_arg_names, dlsym_arg_types, 2, builtinDlsym);
+	namesSet(vmdctx->nt, "dlsym", bfDlsym);
 
 	/* debug info */
 	if (VM_DEBUG) fprintf(debug_file, "[vm] initialised builtin functions.\n");
@@ -1761,6 +1793,8 @@ extern void vmExec(vm *v) {
 		namesSet(vmdctx->nt, "false", intobjectNew(0));
 		namesSet(vmdctx->nt, "null", intobjectNew(0));
 		namesSet(vmdctx->nt, "nullchar", charobjectNew(0));
+
+		typeRegister("function", OBJECT_FUNC);
 	
 		/* load builtin functions */
 		vmLoadBuiltins();
@@ -1909,7 +1943,7 @@ extern void vmGetErrorInfo(vm *v, unsigned int *lineno, unsigned int *colno) {
 
 /* free a vm */
 extern void vmFree(vm *v) {
-
+	
 	free(v->bc);
 	free(v);
 }

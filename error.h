@@ -47,6 +47,8 @@
 #define ERROR_CODE_UNKNOWNFD 403 /* unknown/invalid file descriptor */
 #define ERROR_CODE_UNDEFINEDNAME 404 /* cannot get name from list of names */
 #define ERROR_CODE_KBINT 405 /* keyboard interrupt */
+#define ERROR_CODE_NOFILE 406 /* failed to open file */
+#define ERROR_CODE_INVALIDVALUE 407 /* used for invalid values in builtins */
 
 /* functions */
 extern void errorSet(unsigned int err_type, unsigned int err_code, const char *err_msg); /* set the error */

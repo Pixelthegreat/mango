@@ -48,5 +48,6 @@ typedef struct {
 
 /* functions */
 extern object *functionobjectNew(char *func_name, unsigned char rt_type, char **fa_names, unsigned char *fa_types, int n_of_args);
+extern object *functionobjectBuiltinNew(char *func_name, unsigned char rt_type, char **fa_names, unsigned char *fa_types, int n_of_args, bfunc_handle_t f);
 
 #endif /* _FUNCTIONOBJECT_H */
