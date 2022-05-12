@@ -50,7 +50,7 @@ extern int INT_SIGNAL;
 /* functions */
 extern void objectIntHandler(int n); /* interrupt handler for SIGINT (aka Ctrl+C) */
 extern void objectSegvHandler(int n); /* interrupt handler for segmentation faults */
-extern object *objectNew(unsigned char type, unsigned int size); /* create a new object and increase reference count by 1 */
+extern object *objectNew(unsigned char type, size_t size); /* create a new object and increase reference count by 1 */
 //extern object *objectNewInt(int value); /* create a new integer */
 //extern object *objectNewString(char *value); /* create a new string */
 //extern object *objectNewChar(char value); /* create a new char */

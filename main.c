@@ -102,6 +102,10 @@ int main(int argc, char **argv) {
 	/* run file */
 	run(argpfv[0], bc_mode);
 
+	/* error */
+	if (errorIsSet())
+		return -1;
+
 	#else
 
 	/* always include this */

@@ -1019,6 +1019,32 @@ extern node *parserKeyword(parser *p) {
 
 		parserAdvance(p); /* advance */
 
+		int eb = 0; /* value */
+
+		/* else block */
+		if (tokenMatches(p->current_token, TOKEN_KEYWORD, "else")) {
+
+			eb = 1;
+			parserAdvance(p); /* advance */
+
+			/* get node */
+			node *e = parserExpr(p);
+
+			/* error */
+			if (e == NULL || errorIsSet()) {
+
+				/* free and return */
+				nodeFree(n);
+				return NULL;
+			}
+
+			/* add child */
+			nodeAddChild(n, e);
+		}
+
+		/* add else block value */
+		nodeAddValue(n, eb);
+
 		/* return node */
 		return n;
 	}

@@ -771,11 +771,28 @@ extern void bytecodeWriteIfStatement(bytecode *bc, node *n) {
 	unsigned int bcl = bc->len;
 
 	/* write body nodes */
-	for (unsigned int i = 1; i < n->n_of_children; i++)
+	for (unsigned int i = 1; i < n->n_of_children - n->values[0]; i++)
 		bytecodeWrite(bc, n->children[i]);
 
 	/* change original number */
 	bytecodeInsertInt(bc, bcl_n, bc->len - bcl);
+
+	/* else block */
+	bytecodeAdd(bc, n->values[0]);
+
+	if (n->values[0]) {
+
+		/* integer for length of else node */
+		bcl_n = (bc->len + 1);
+		bytecodeWriteInt(bc, 0);
+		bcl = bc->len;
+
+		/* node */
+		bytecodeWrite(bc, n->children[n->n_of_children - 1]);
+
+		/* change number */
+		bytecodeInsertInt(bc, bcl_n, bc->len - bcl);
+	}
 }
 
 /* write a while loop */

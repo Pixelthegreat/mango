@@ -36,6 +36,7 @@ typedef struct {
 	int n_len; /* length of array (aka number of items it can store) */
 	int n_sz; /* size of each array unit */
 	void *n_start; /* start of array */
+	int a_type; /* the type of array */
 } arrayobject;
 
 /* functions */

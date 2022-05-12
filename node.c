@@ -287,12 +287,18 @@ extern void nodePrintTree(node *n) {
 		nodePrintTree(n->children[0]);
 		printf(") -> [\n");
 
-		for (unsigned int i = 1; i < n->n_of_children; i++) {
+		for (unsigned int i = 1; i < n->n_of_children - n->values[0]; i++) {
 
 			nodePrintTree(n->children[i]);
 			printf(";\n");
 		}
 		printf("]");
+
+		if (n->values[0]) {
+
+			printf(" else ");
+			nodePrintTree(n->children[n->n_of_children-1]);
+		}
 	}
 	/* struct */
 	else if (n->type == NODE_STRUCT) {

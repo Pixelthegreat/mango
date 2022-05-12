@@ -67,6 +67,7 @@ extern void lexerAddToken(lexer *l, token *t); /* add a token */
 						 !strcmp(s, "fun") ||\
 						 !strcmp(s, "for") ||\
 						 !strcmp(s, "if") ||\
+						 !strcmp(s, "else") ||\
 						 !strcmp(s, "return") ||\
 						 !strcmp(s, "typedef") ||\
 						 !strcmp(s, "as") ||\

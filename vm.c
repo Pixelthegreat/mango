@@ -29,8 +29,6 @@
 #include "structobject.h"
 #include "typedef.h"
 #include "error.h"
-
-
 #include "token.h"
 #include <stdlib.h>
 #include <string.h>
@@ -53,6 +51,10 @@ static int gbc_len = 100; /* number of iterations of vmHandle before objectColle
 object *debug_trace[8];
 int dbt_n = 0;
 extern FILE *debug_file;
+
+extern int program_arg_idx; /* if there were any arguments */
+extern int argparse_argc;
+extern char **argparse_argv;
 
 /* create a new vm struct from existing bytecode structure */
 extern vm *vmNew(bytecode *bc) {
@@ -296,6 +298,17 @@ extern object *vmHandle(vm *v, unsigned int i) {
 
 			/* get dereffed value */
 			o = O_OBJ(O_PTR(a)->val);
+
+			/* invalid pointer */
+			if (o == NULL) {
+
+				/* set error */
+				errorSet(ERROR_TYPE_RUNTIME,
+						 ERROR_CODE_INVALIDPTR,
+						 "Invalid pointer (null)");
+				errorSetPos(lineno, colno, v->ctx->fn);
+				return NULL;
+			}
 		}
 
 		else o = a;
@@ -422,9 +435,6 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		int lineno, colno;
 		vmGetErrorInfo(v, &lineno, &colno);
 
-		//printf("%08x\n", v->lowbi + v->nofbytes);
-		//return NULL;
-
 		/* undefined name */
 		if (!exists) {
 
@@ -512,7 +522,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 			}
 
 			/* check types */
-			if (((a->type & 0x3) != val->type) || ((a->type & OBJECT_POINTER) != (val->type & OBJECT_POINTER))) {
+			if (((a->type & ~(OBJECT_ARRAY)) != val->type) || ((a->type & OBJECT_POINTER) != (val->type & OBJECT_POINTER))) {
 
 				/* set error */
 				errorSet(ERROR_TYPE_RUNTIME,
@@ -523,9 +533,9 @@ extern object *vmHandle(vm *v, unsigned int i) {
 			}
 
 			/* set value */
-			if (a->type & OBJECT_POINTER) ((void **)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val] = O_PTR(val)->val;
-			else if ((a->type & 0x3) == OBJECT_INT) ((int *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val] = O_INT(val)->val;
-			else if ((a->type & 0x3) == OBJECT_CHR) ((char *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val] = O_CHR(val)->val;
+			if (O_ARRAY(a)->a_type & OBJECT_POINTER) ((void **)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val] = O_PTR(val)->val;
+			else if (O_ARRAY(a)->a_type == OBJECT_INT) ((int *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val] = O_INT(val)->val;
+			else if (O_ARRAY(a)->a_type == OBJECT_CHR) ((char *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val] = O_CHR(val)->val;
 		}
 		else {
 
@@ -607,7 +617,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 						continue;
 
 					/* if f is a pointer to a struct */
-					if (f->type == (OBJECT_STRUCT | OBJECT_POINTER))
+					if (f->type == (OBJECT_STRUCT | OBJECT_POINTER) && i < n-1)
 						f = O_OBJ(O_PTR(f)->val);
 				}
 			}
@@ -668,6 +678,17 @@ extern object *vmHandle(vm *v, unsigned int i) {
 				a = O_OBJ(O_PTR(a)->val);
 			}
 
+			/* no value */
+			if (a == NULL) {
+
+				/* set error */
+				errorSet(ERROR_TYPE_RUNTIME,
+						 ERROR_CODE_ILLEGALOP,
+						 "Pointer value is null");
+				errorSetPos(lineno, colno, v->ctx->fn);
+				return NULL;
+			}
+
 			/* check if it is an array */
 			if (!(a->type & OBJECT_ARRAY)) {
 
@@ -691,8 +712,9 @@ extern object *vmHandle(vm *v, unsigned int i) {
 			}
 
 			/* "get" the item */
-			if ((a->type & 0x3) == OBJECT_INT) o = intobjectNew(((int *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val]);
-			else if ((a->type & 0x3) == OBJECT_CHR) o = charobjectNew(((char *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val]);
+			if (O_ARRAY(a)->a_type & OBJECT_POINTER) o = pointerobjectNew(a->type & 0x3, ((void **)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val]);
+			else if (O_ARRAY(a)->a_type == OBJECT_INT) o = intobjectNew(((int *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val]);
+			else if (O_ARRAY(a)->a_type == OBJECT_CHR) o = charobjectNew(((char *)O_ARRAY(a)->n_start)[O_INT(arr_idx)->val]);
 		}
 
 		/* otherwise, we have gotten the object */
@@ -785,7 +807,7 @@ extern object *vmHandle(vm *v, unsigned int i) {
 			/* create an array object */
 			object *a = arrayobjectNew(nsz_arr, ob_type & 0x3);
 
-			o = pointerobjectNew(OBJECT_CHR, (void *)a);
+			o = pointerobjectNew(ob_type & 0x3, (void *)a);
 		}
 
 		/* pointer */
@@ -1196,8 +1218,8 @@ extern object *vmHandle(vm *v, unsigned int i) {
 		int err = 0; /* error code (0 = none, 1 = unknown type name) */
 
 		/* list of argument names and argument types */
-		char **arg_names = (char **)malloc(sizeof(char *) * n_of_args);
-		u8 *arg_types = (u8 *)malloc(n_of_args);
+		char **arg_names = FUNC_ARGNAME_LIST(n_of_args + 1);
+		u8 *arg_types = FUNC_ARGTYPE_LIST(n_of_args + 1);
 
 		/* loop and get argument types and names */
 		for (int i = 0; i < n_of_args; i++) {
@@ -1263,6 +1285,11 @@ extern object *vmHandle(vm *v, unsigned int i) {
 						 ERROR_CODE_ILLEGALOP,
 						 "Unknown type");
 				errorSetPos(lineno, colno, v->ctx->fn);
+
+				/* free args */
+				free(arg_names);
+				free(arg_types);
+
 				return NULL;
 			}
 
@@ -1277,6 +1304,11 @@ extern object *vmHandle(vm *v, unsigned int i) {
 					 ERROR_CODE_ILLEGALOP,
 					 "Illegal operation");
 			errorSetPos(lineno, colno, v->ctx->fn);
+
+			/* free args */
+			free(arg_names);
+			free(arg_types);
+
 			return NULL;
 		}
 
@@ -1377,6 +1409,24 @@ extern object *vmHandle(vm *v, unsigned int i) {
 
 		/* set number of bytes and return value */
 		v->nofbytes = nofbytes;
+
+		/* else block */
+		int eb = ((u8*)v->bc)[v->lowbi + v->nofbytes++];
+
+		if (eb) {
+
+			/* get number */
+			v->nofbytes++;
+			nofbytes = (vmGetInt(v, v->lowbi + v->nofbytes)) + v->nofbytes + 4;
+			v->nofbytes += 4;
+
+			/* handle node */
+			if (vmHandle(v, v->lowbi + v->nofbytes) == NULL || errorIsSet())
+				return NULL;
+
+			/* set number of bytes */
+			v->nofbytes = nofbytes;
+		}
 
 		o = intobjectNew(0);
 	}
@@ -1719,6 +1769,40 @@ int _vmloadeddata = 0;
 /* load builtin functions */
 extern void vmLoadBuiltins() {
 
+	/* argument list */
+	if (program_arg_idx < 0) {
+
+		/* create values */
+		object *arg_list = arrayobjectNew(1, OBJECT_CHR | OBJECT_POINTER);
+		object *arg_cnt = intobjectNew(0);
+
+		/* set values */
+		namesSet(vmdctx->nt, "argv", arg_list);
+		namesSet(vmdctx->nt, "argc", arg_cnt);
+	}
+	else {
+
+		/* create values */
+		object *arg_list = arrayobjectNew(argparse_argc - program_arg_idx + 1, OBJECT_CHR | OBJECT_POINTER);
+		object *arg_cnt = intobjectNew(argparse_argc - program_arg_idx);
+
+		/* add pointers */
+		for (int i = program_arg_idx; i < argparse_argc; i++) {
+
+			/* create string object */
+			object *s = arrayobjectNew(strlen(argparse_argv[i]) + 1, OBJECT_CHR);
+			strcpy(O_ARRAY(s)->n_start, argparse_argv[i]);
+			INCREF(s);
+
+			/* store pointer */
+			((void **)O_ARRAY(arg_list)->n_start)[i - program_arg_idx] = s;
+		}
+
+		/* set values */
+		namesSet(vmdctx->nt, "argv", arg_list);
+		namesSet(vmdctx->nt, "argc", arg_cnt);
+	}
+
 	/* write */
 	char **write_arg_names = FUNC_ARGNAME_LIST(3);
 	write_arg_names[0] = "fd";
@@ -1786,13 +1870,16 @@ extern void vmLoadBuiltins() {
 /* execute bytecode */
 extern void vmExec(vm *v) {
 
-	/* create variables for true (1), false (0), and null (0) */
+	/* create builtin variables and types */
 	if (!_vmloadeddata) {
-	
+		
+		object *nullptr_obj = pointerobjectNew(OBJECT_STRUCT, NULL);
 		namesSet(vmdctx->nt, "true", intobjectNew(1));
 		namesSet(vmdctx->nt, "false", intobjectNew(0));
 		namesSet(vmdctx->nt, "null", intobjectNew(0));
 		namesSet(vmdctx->nt, "nullchar", charobjectNew(0));
+		namesSet(vmdctx->nt, "none", nullptr_obj);
+		namesSet(vmdctx->nt, "nullptr", nullptr_obj);
 
 		typeRegister("function", OBJECT_FUNC);
 	
@@ -1805,7 +1892,7 @@ extern void vmExec(vm *v) {
 	/* debug info */
 	if (VM_DEBUG) {
 
-		fprintf(debug_file, "[vm] initialised variables true (0), false (0), and null (0).\n");
+		fprintf(debug_file, "[vm] initialised builtin variables and types\n");
 	}
 
 	object *co = NULL; /* current object */

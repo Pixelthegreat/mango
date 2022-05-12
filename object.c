@@ -81,7 +81,7 @@ extern void objectSegvHandler(int n) {
 }
 
 /* create an object */
-extern object *objectNew(unsigned char type, unsigned int size) {
+extern object *objectNew(unsigned char type, size_t size) {
 	
 	object *o = (object *)malloc(size); /* new object! :D */
 
@@ -150,6 +150,10 @@ extern object *objectNew(unsigned char type, unsigned int size) {
 
 /* copy an object */
 extern object *objectCopy(object *o) {
+
+	/* return if not int, chr, or array */
+	if (o->type != OBJECT_INT && o->type != OBJECT_CHR && !(o->type & OBJECT_ARRAY) && !(o->type & OBJECT_POINTER))
+		return o;
 
 	object *o2 = objectNew(o->type, o->sz);
 	memcpy(o2, o, o->sz);
@@ -234,6 +238,9 @@ extern void typeRegisterStruct(char *tp_name, object *st) {
 /* get a new type */
 extern unsigned char typeGet(char *tp_name) {
 
+	if (types == NULL)
+		return 0xFF;
+
 	/* loop through types */
 	for (int i = 0; i < types_len; i++) {
 
@@ -247,6 +254,9 @@ extern unsigned char typeGet(char *tp_name) {
 
 /* get a new type */
 extern object *typeobjectGet(char *tp_name) {
+
+	if (types == NULL)
+		return NULL;
 
 	/* loop through types */
 	for (int i = 0; i < types_len; i++) {
@@ -421,7 +431,7 @@ extern object *objectOperation(object *obj, object *other, unsigned int op_num) 
 extern object *arrayobjectNew(int n, unsigned char t) {
 
 	/* malloc new array object */
-	arrayobject *a = (arrayobject *)objectNew(t | OBJECT_ARRAY, sizeof(arrayobject) + (n * sizeof(O_TPSZ(t))));
+	arrayobject *a = (arrayobject *)objectNew((t & 0x3) | OBJECT_ARRAY, sizeof(arrayobject) + (n * O_TPSZ(t)));
 
 	/* :( */
 	if (a == NULL)
@@ -435,9 +445,10 @@ extern object *arrayobjectNew(int n, unsigned char t) {
 	a->n_len = n;
 	a->n_sz = 0;
 	a->n_start = ((void *)a + sizeof(arrayobject));
+	a->a_type = t & ~(OBJECT_ARRAY);
 
 	/* clear buffer */
-	memset(a->n_start, 0, (n * sizeof(O_TPSZ(t))));
+	memset(a->n_start, 0, (n * O_TPSZ(t)));
 
 	/* return object */
 	return O_OBJ(a);
@@ -526,6 +537,7 @@ extern object *functionobjectBuiltinNew(char *func_name, unsigned char rt_type, 
 	/* set values */
 	O_FUNC(o)->is_builtin = 1;
 	O_FUNC(o)->fb_start = (unsigned char *)f;
+	INCREF(o);
 
 	/* return function */
 	return o;
@@ -584,6 +596,8 @@ extern void objectFree(object *obj) {
 
 	/* function */
 	if (obj->type == OBJECT_FUNC) {
+
+		if (DEBUG) fprintf(debug_file, "[DEBUG] Freeing function '%s'\n", O_FUNC(obj)->func_name);
 
 		/* free lists of argument names and types */
 		free(O_FUNC(obj)->fa_names);
@@ -667,6 +681,7 @@ extern void objectFreeAll() {
 
 			/* debug mode stuff */
 			if (DEBUG) fprintf(debug_file, "[DEBUG] Freed %p.\n", objects[i]);
+			objects[i] = NULL;
 		}
 	}
 
@@ -675,6 +690,7 @@ extern void objectFreeAll() {
 
 	/* free type list */
 	if (types != NULL) free(types);
+	types = NULL;
 }
 
 /* builtin function : write */

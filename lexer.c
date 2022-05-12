@@ -305,11 +305,19 @@ extern void lexerLex(lexer *l) {
 		}
 
 		/* '*' */
-		else if (l->c_char == '*')  {
+		else if (l->c_char == '*') {
 
 			token *t = tokenNew(TOKEN_MUL, "*", l->lineno, l->colno, l->fname);
 			lexerAddToken(l, t);
 			lexerAdvance(l);
+		}
+
+		/* '#' */
+		else if (l->c_char == '#') {
+
+			/* wait until we reach newline or end */
+			while (l->c_char != '\0' && l->c_char != '\n')
+				lexerAdvance(l);
 		}
 
 		/* '/' */
@@ -586,6 +594,8 @@ extern void lexerFree(lexer *l) {
 	for (int i = 0; i < l->n_of_tokens; i++)
 		tokenFree(l->tokens[i]);
 
+	/* free token list */
+	free(l->tokens);
 	free(l); /* free lexer */
 }
 

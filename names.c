@@ -129,7 +129,7 @@ extern void namesSet(nameTable *nt, char *name, object *value) {
 		XDECREF(nt->values[idx]);
 
 		/* for pointers */
-		if (nt->values[idx]->type & (1 << 3))
+		if (nt->values[idx]->type & OBJECT_POINTER && !(nt->values[idx]->type & OBJECT_ARRAY))
 			XDECREF(O_OBJ(O_PTR(nt->values[idx])->val));
 	}
 
@@ -137,7 +137,7 @@ extern void namesSet(nameTable *nt, char *name, object *value) {
 	XINCREF(value);
 
 	/* for pointers */
-	if (value->type & OBJECT_POINTER) {
+	if (value->type & OBJECT_POINTER && !(value->type & OBJECT_ARRAY)) {
 
 		XINCREF(O_OBJ(O_PTR(value)->val));
 	}

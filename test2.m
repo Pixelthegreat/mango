@@ -1,5 +1,8 @@
-/* testing program (if you want to use vim, then don't erase this comment */
+/*
+ *
+ * file: test2.m
+ * description: testing program for mango
+ */
+function *f = none;
 
-typedef chr *ss;
-
-ss s = "hello, world!";
+f();

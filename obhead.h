@@ -38,7 +38,7 @@
 
 /* these will make builtin function creation much less ugly */
 #define FUNC_ARGNAME_LIST(n) ((char **)malloc(sizeof(char *) * n))
-#define FUNC_ARGTYPE_LIST(n) ((unsigned char *)malloc(sizeof(unsigned char) * n))
+#define FUNC_ARGTYPE_LIST(n) ((unsigned char *)malloc(sizeof(unsigned char) * n + 1))
 
 /* object head */
 #define OB_HEAD 	unsigned int refcnt; /* number of references */ \

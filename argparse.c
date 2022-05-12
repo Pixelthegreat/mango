@@ -30,9 +30,12 @@
 unsigned int status_flags = 0x00000000;
 char **filename_list = NULL; /* list of file names */
 int filename_len = 0; /* length of filename list */
+int program_arg_idx = -1; /* program argument index */
+char **argparse_argv = NULL; /* argv */
+int argparse_argc = 0; /* argc */
 
 /* help information */
-static char *hlp_inf = "usage: %s [filename] [options]\n\noptions:\n\t-cl       compile library\n\t-cm       compile bytecode executable\n\t-i        idata mode\n\t-h        display help\n\t--help    same as '-h'\n\t-l [lib]  specify a library to run with\n\t-d        print debug info\n\t-df [f]   specify an output file for the debug log\n\n";
+static char *hlp_inf = "usage: %s [filename] [options]\n\noptions:\n    -cl       compile library\n    -cm       compile bytecode executable\n    -i        idata mode\n    -h        display help\n    --help    same as '-h'\n    -l [lib]  specify a library to run with\n    -d        print debug info\n    -df [f]   specify an output file for the debug log\n    --        pass following arguments to program\n\n";
 extern char *prog_name;
 extern FILE *debug_file;
 
@@ -110,9 +113,19 @@ extern int argparse_flag2bcm() {
 /* parse arguments */
 extern int argparse(int argc, char **argv) {
 
+	argparse_argv = argv;
+	argparse_argc = argc;
+
 	/* parse args */
 	int argidx = 1; /* index in list */
 	while (argidx < argc) {
+
+		/* redirect arguments */
+		if (!strcmp(argv[argidx], "--")) {
+
+			program_arg_idx = ++argidx;
+			break;
+		}
 
 		/* one argument */
 		if (!strcmp(argv[argidx], "-cl") ||
